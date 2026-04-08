@@ -72,7 +72,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     padding: spacing.md,
-    paddingTop: 100,
   },
   card: {
     backgroundColor: colors.surface,
