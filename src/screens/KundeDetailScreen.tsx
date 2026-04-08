@@ -1,4 +1,5 @@
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ArrowLeft, Building2, User, Mail, Phone, MapPin, Hash } from 'lucide-react-native'
 import { Kunde } from '../lib/api'
 import { colors, spacing } from '../theme'
@@ -9,6 +10,7 @@ interface KundeDetailScreenProps {
 }
 
 export function KundeDetailScreen({ kunde, onBack }: KundeDetailScreenProps) {
+  const insets = useSafeAreaInsets()
   const name = kunde.company_name || [kunde.first_name, kunde.last_name].filter(Boolean).join(' ') || 'Unbenannt'
   const fullAddress = [kunde.street, kunde.house_number].filter(Boolean).join(' ')
   const cityLine = [kunde.postal_code, kunde.city].filter(Boolean).join(' ')
@@ -23,7 +25,7 @@ export function KundeDetailScreen({ kunde, onBack }: KundeDetailScreenProps) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <ArrowLeft size={24} color={colors.text} />
         </TouchableOpacity>
