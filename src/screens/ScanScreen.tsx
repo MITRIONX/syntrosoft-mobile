@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { View, Text, StyleSheet, Alert, ActivityIndicator } from 'react-native'
-import { BarCodeScanner } from 'expo-barcode-scanner'
+import { CameraView, useCameraPermissions } from 'expo-camera'
 import { pairDevice } from '../lib/auth'
 import { colors } from '../theme'
 
@@ -9,19 +9,13 @@ interface ScanScreenProps {
 }
 
 export function ScanScreen({ onPaired }: ScanScreenProps) {
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null)
-  const [scanned, setScanned] = useState(false)
+  const [permission, requestPermission] = useCameraPermissions()
   const [pairing, setPairing] = useState(false)
+  const scannedRef = useRef(false)
 
-  useEffect(() => {
-    BarCodeScanner.requestPermissionsAsync().then(({ status }) => {
-      setHasPermission(status === 'granted')
-    })
-  }, [])
-
-  const handleBarCodeScanned = async ({ data }: { type: string; data: string }) => {
-    if (scanned || pairing) return
-    setScanned(true)
+  const handleBarCodeScanned = async ({ data }: { data: string }) => {
+    if (scannedRef.current || pairing) return
+    scannedRef.current = true
     setPairing(true)
 
     try {
@@ -33,12 +27,12 @@ export function ScanScreen({ onPaired }: ScanScreenProps) {
       onPaired()
     } catch (err: any) {
       Alert.alert('Fehler', err.message || 'Pairing fehlgeschlagen', [
-        { text: 'Nochmal', onPress: () => { setScanned(false); setPairing(false) } },
+        { text: 'Nochmal', onPress: () => { scannedRef.current = false; setPairing(false) } },
       ])
     }
   }
 
-  if (hasPermission === null) {
+  if (!permission) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -47,7 +41,8 @@ export function ScanScreen({ onPaired }: ScanScreenProps) {
     )
   }
 
-  if (!hasPermission) {
+  if (!permission.granted) {
+    requestPermission()
     return (
       <View style={styles.container}>
         <Text style={styles.title}>Kamera-Zugriff benoetigt</Text>
@@ -66,12 +61,12 @@ export function ScanScreen({ onPaired }: ScanScreenProps) {
       </View>
 
       <View style={styles.scannerContainer}>
-        <BarCodeScanner
-          onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+        <CameraView
           style={StyleSheet.absoluteFillObject}
-          barCodeTypes={[BarCodeScanner.Constants.BarCodeType.qr]}
+          facing="back"
+          barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+          onBarcodeScanned={pairing ? undefined : handleBarCodeScanned}
         />
-        {/* Scan overlay */}
         <View style={styles.overlay}>
           <View style={styles.scanFrame} />
         </View>
