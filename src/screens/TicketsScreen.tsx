@@ -9,9 +9,11 @@ interface TicketsScreenProps {
   onSelectTicket: (ticket: Ticket) => void
 }
 
-function timeAgo(dateStr: string): string {
-  const now = Date.now()
+function timeAgo(dateStr: string | null | undefined): string {
+  if (!dateStr) return ''
   const d = new Date(dateStr).getTime()
+  if (isNaN(d) || d < 86400000) return ''
+  const now = Date.now()
   const diff = Math.floor((now - d) / 1000)
   if (diff < 60) return 'gerade eben'
   if (diff < 3600) return `vor ${Math.floor(diff / 60)}m`
@@ -58,7 +60,7 @@ export function TicketsScreen({ onSelectTicket }: TicketsScreenProps) {
             <MessageSquare size={18} color={colors.primary} />
           </View>
           <View style={styles.cardInfo}>
-            <Text style={styles.ticketNumber}>#{item.ticket_number}</Text>
+            <Text style={styles.ticketNumber}>{item.ticket_number?.startsWith('#') ? '' : '#'}{item.ticket_number}</Text>
             <Text style={styles.subject} numberOfLines={1}>{item.subject}</Text>
           </View>
           {item.status_name && <StatusBadge name={item.status_name} color={item.status_color} />}
@@ -76,7 +78,7 @@ export function TicketsScreen({ onSelectTicket }: TicketsScreenProps) {
             </View>
             <View style={styles.cardDetail}>
               <Clock size={12} color={colors.textMuted} />
-              <Text style={styles.cardDetailText}>{timeAgo(item.updated_at)}</Text>
+              <Text style={styles.cardDetailText}>{timeAgo(item.updated_at || item.created_at)}</Text>
             </View>
           </View>
         </View>

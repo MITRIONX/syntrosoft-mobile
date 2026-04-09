@@ -11,9 +11,26 @@ interface TicketDetailScreenProps {
   onBack: () => void
 }
 
-function timeAgo(dateStr: string): string {
-  const now = Date.now()
+function decodeHtmlEntities(text: string): string {
+  if (!text) return ''
+  return text
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&zwnj;/gi, '')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&#\d+;/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
+function timeAgo(dateStr: string | null | undefined): string {
+  if (!dateStr) return ''
   const d = new Date(dateStr).getTime()
+  if (isNaN(d) || d < 86400000) return ''
+  const now = Date.now()
   const diff = Math.floor((now - d) / 1000)
   if (diff < 60) return 'gerade eben'
   if (diff < 3600) return `vor ${Math.floor(diff / 60)}m`
@@ -34,6 +51,7 @@ function ColorBadge({ name, color }: { name: string; color: string }) {
 function MessageBubble({ msg }: { msg: TicketMessage }) {
   const isAgent = msg.sender_type === 'agent'
   const isSystem = msg.sender_type === 'system' || msg.is_internal_note
+  const bodyText = decodeHtmlEntities(msg.body) || '(Kein Textinhalt)'
 
   if (isSystem) {
     return (
@@ -44,7 +62,7 @@ function MessageBubble({ msg }: { msg: TicketMessage }) {
             <Text style={styles.systemNoteLabel}>Interne Notiz</Text>
           </View>
         )}
-        <Text style={styles.systemNoteText}>{msg.body}</Text>
+        <Text style={styles.systemNoteText}>{bodyText}</Text>
         <Text style={styles.systemNoteTime}>{timeAgo(msg.created_at)}</Text>
       </View>
     )
@@ -65,7 +83,7 @@ function MessageBubble({ msg }: { msg: TicketMessage }) {
           <Text style={styles.bubbleTime}>{timeAgo(msg.created_at)}</Text>
         </View>
         <Text style={[styles.bubbleBody, isAgent ? styles.bubbleBodyAgent : styles.bubbleBodyCustomer]}>
-          {msg.body}
+          {bodyText}
         </Text>
         {msg.has_attachments && (
           <Text style={styles.bubbleAttachment}>Anhang vorhanden</Text>
@@ -101,7 +119,7 @@ export function TicketDetailScreen({ ticket, onBack }: TicketDetailScreenProps) 
           <ArrowLeft size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.headerTitles}>
-          <Text style={styles.headerTicketNumber}>#{ticket.ticket_number}</Text>
+          <Text style={styles.headerTicketNumber}>{ticket.ticket_number?.startsWith('#') ? '' : '#'}{ticket.ticket_number}</Text>
           <Text style={styles.headerSubject} numberOfLines={1}>{ticket.subject}</Text>
         </View>
       </View>
