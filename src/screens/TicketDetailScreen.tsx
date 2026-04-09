@@ -1,8 +1,9 @@
 import { useRef } from 'react'
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native'
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, useWindowDimensions } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ArrowLeft, Lock, User, Bot, Settings } from 'lucide-react-native'
 import { useQuery } from '@tanstack/react-query'
+import RenderHtml from 'react-native-render-html'
 import { api, Ticket, TicketMessage, TicketDetail } from '../lib/api'
 import { colors, spacing } from '../theme'
 
@@ -48,12 +49,48 @@ function ColorBadge({ name, color }: { name: string; color: string }) {
   )
 }
 
+function MessageContent({ msg, isAgent }: { msg: TicketMessage; isAgent: boolean }) {
+  const { width } = useWindowDimensions()
+  const contentWidth = width * 0.78 - 40 // bubble maxWidth minus padding
+
+  if (msg.body_html) {
+    const htmlStyles = {
+      body: { color: colors.text, fontSize: 14, lineHeight: 20 },
+      p: { marginTop: 0, marginBottom: 8 },
+      a: { color: colors.primary },
+      table: { borderColor: colors.border },
+      td: { padding: 4, borderColor: colors.border, borderWidth: 0.5 },
+      th: { padding: 4, borderColor: colors.border, borderWidth: 0.5, fontWeight: '600' as const },
+      img: { maxWidth: contentWidth },
+    }
+    return (
+      <RenderHtml
+        contentWidth={contentWidth}
+        source={{ html: msg.body_html }}
+        tagsStyles={htmlStyles}
+        defaultTextProps={{ selectable: true }}
+        enableExperimentalMarginCollapsing
+      />
+    )
+  }
+
+  const bodyText = decodeHtmlEntities(msg.body) || '(Kein Textinhalt)'
+  return (
+    <Text
+      style={[styles.bubbleBody, isAgent ? styles.bubbleBodyAgent : styles.bubbleBodyCustomer]}
+      selectable
+    >
+      {bodyText}
+    </Text>
+  )
+}
+
 function MessageBubble({ msg }: { msg: TicketMessage }) {
   const isAgent = msg.sender_type === 'agent'
   const isSystem = msg.sender_type === 'system' || msg.is_internal_note
-  const bodyText = decodeHtmlEntities(msg.body) || '(Kein Textinhalt)'
 
   if (isSystem) {
+    const bodyText = decodeHtmlEntities(msg.body) || '(Kein Textinhalt)'
     return (
       <View style={styles.systemNote}>
         {msg.is_internal_note && (
@@ -82,9 +119,7 @@ function MessageBubble({ msg }: { msg: TicketMessage }) {
           </Text>
           <Text style={styles.bubbleTime}>{timeAgo(msg.created_at)}</Text>
         </View>
-        <Text style={[styles.bubbleBody, isAgent ? styles.bubbleBodyAgent : styles.bubbleBodyCustomer]}>
-          {bodyText}
-        </Text>
+        <MessageContent msg={msg} isAgent={isAgent} />
         {msg.has_attachments && (
           <Text style={styles.bubbleAttachment}>Anhang vorhanden</Text>
         )}
