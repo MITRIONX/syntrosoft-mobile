@@ -1,9 +1,9 @@
 import { useRef } from 'react'
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, useWindowDimensions, Linking } from 'react-native'
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Linking } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ArrowLeft, Lock, User, Bot, Settings, Paperclip, FileText, Image as ImageIcon, File } from 'lucide-react-native'
 import { useQuery } from '@tanstack/react-query'
-import RenderHtml from 'react-native-render-html'
+// HTML-Rendering deaktiviert - Plain-Text ist zuverlaessiger
 import { api, Ticket, TicketMessage, TicketAttachment, TicketDetail } from '../lib/api'
 import { colors, spacing } from '../theme'
 
@@ -49,82 +49,7 @@ function ColorBadge({ name, color }: { name: string; color: string }) {
   )
 }
 
-function isComplexEmailHtml(html: string): boolean {
-  return /<!DOCTYPE|<html|<head/i.test(html)
-}
-
-function extractBodyHtml(html: string): string {
-  // Nur den <body> Inhalt extrahieren
-  const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i)
-  const body = bodyMatch ? bodyMatch[1] : html
-  // <style> Blocks entfernen
-  let cleaned = body.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-  // bgcolor entfernen
-  cleaned = cleaned.replace(/\s*bgcolor\s*=\s*["'][^"']*["']/gi, '')
-  // Farb-Styles aus Inline-Styles entfernen
-  cleaned = cleaned.replace(/style\s*=\s*"([^"]*)"/gi, (_match, styles: string) => {
-    const filtered = styles
-      .split(';')
-      .filter(s => {
-        const prop = s.split(':')[0]?.trim().toLowerCase()
-        return prop !== 'color' && prop !== 'background-color' && prop !== 'background' && prop !== 'border-color'
-      })
-      .join(';')
-    return `style="${filtered}"`
-  })
-  return cleaned
-}
-
 function MessageContent({ msg, isAgent }: { msg: TicketMessage; isAgent: boolean }) {
-  const { width } = useWindowDimensions()
-  const contentWidth = width * 0.78 - 40
-
-  if (msg.body_html) {
-    // Komplexe E-Mail-HTMLs (mit DOCTYPE/html/head) -> Body extrahieren
-    const htmlToRender = isComplexEmailHtml(msg.body_html)
-      ? extractBodyHtml(msg.body_html)
-      : msg.body_html
-
-    // Pruefen ob nach Bereinigung sichtbarer Text vorhanden ist
-    const strippedHtml = htmlToRender.replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').replace(/&zwnj;/gi, '').replace(/\s+/g, ' ').trim()
-    if (strippedHtml.length < 3) {
-      const bodyText = decodeHtmlEntities(msg.body) || '(Kein Textinhalt)'
-      return (
-        <Text style={[styles.bubbleBody, isAgent ? styles.bubbleBodyAgent : styles.bubbleBodyCustomer]} selectable>
-          {bodyText}
-        </Text>
-      )
-    }
-
-    const htmlStyles = {
-      body: { color: colors.text, fontSize: 14, lineHeight: 20 },
-      p: { color: colors.text, marginTop: 0, marginBottom: 8 },
-      span: { color: colors.text },
-      div: { color: colors.text },
-      font: { color: colors.text },
-      li: { color: colors.text },
-      td: { color: colors.text, padding: 4 },
-      th: { color: colors.text, padding: 4, fontWeight: '600' as const },
-      a: { color: colors.primary },
-      img: { maxWidth: contentWidth },
-      h1: { color: colors.text },
-      h2: { color: colors.text },
-      h3: { color: colors.text },
-      h4: { color: colors.text },
-    }
-    return (
-      <RenderHtml
-        contentWidth={contentWidth}
-        source={{ html: htmlToRender }}
-        tagsStyles={htmlStyles}
-        baseStyle={{ color: colors.text }}
-        ignoredStyles={['color', 'backgroundColor', 'background', 'background-color', 'border-color']}
-        defaultTextProps={{ selectable: true, style: { color: colors.text } }}
-        enableExperimentalMarginCollapsing
-      />
-    )
-  }
-
   const bodyText = decodeHtmlEntities(msg.body) || '(Kein Textinhalt)'
   return (
     <Text style={[styles.bubbleBody, isAgent ? styles.bubbleBodyAgent : styles.bubbleBodyCustomer]} selectable>
