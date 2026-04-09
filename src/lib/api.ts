@@ -106,6 +106,22 @@ export const api = {
     return mobileFetch('/telefonie/calls', query)
   },
 
+  async linkCallToCustomer(callId: number, customerId: number): Promise<{ success: boolean }> {
+    return mobilePut(`/telefonie/calls/${callId}/link`, { customer_id: customerId })
+  },
+
+  async createCustomerFromCall(callId: number, data: { company_name?: string; first_name?: string; last_name?: string; phone: string; email?: string }): Promise<{ success: boolean; data?: any }> {
+    const conn = await getConnectionInfo()
+    if (!conn) throw new Error('Nicht verbunden')
+    const res = await fetch(`${conn.serverUrl}/api/mobile/telefonie/create-customer`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${conn.deviceToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ callId, ...data }),
+    })
+    if (!res.ok) throw new Error(`Fehler: ${res.status}`)
+    return res.json()
+  },
+
   async getTicketStatuses(): Promise<{ success: boolean; statuses: TicketStatus[] }> {
     return mobileFetch('/tickets/config/statuses')
   },
