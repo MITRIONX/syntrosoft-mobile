@@ -3,7 +3,6 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, 
 import { useQuery } from '@tanstack/react-query'
 import { Search, Package } from 'lucide-react-native'
 import { api, PurchaseOrder } from '../lib/api'
-import { BestellungDetailScreen } from './BestellungDetailScreen'
 import { colors, spacing } from '../theme'
 
 function formatDate(dateStr: string | null): string {
@@ -22,11 +21,7 @@ export function BestellungenScreen() {
   const styles = createStyles()
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null)
-
-  if (selectedOrder) {
-    return <BestellungDetailScreen order={selectedOrder} onBack={() => setSelectedOrder(null)} />
-  }
+  // Detail temporär deaktiviert zum Debuggen
 
   const handleSearch = useCallback((text: string) => {
     setSearch(text)
@@ -52,7 +47,7 @@ export function BestellungenScreen() {
     const statusText = item.status_text || (isComplete ? 'Geliefert' : delivered > 0 ? 'Teillieferung' : 'Bestellt')
 
     return (
-      <TouchableOpacity style={styles.card} onPress={() => setSelectedOrder(item)} activeOpacity={0.7}>
+      <View style={styles.card}>
         <View style={styles.cardTop}>
           <View style={{ flex: 1 }}>
             <View style={styles.orderRow}>
@@ -75,7 +70,7 @@ export function BestellungenScreen() {
         {item.reference_order_number && (
           <Text style={styles.reference}>Auftrag: {item.reference_order_number}</Text>
         )}
-      </TouchableOpacity>
+      </View>
     )
   }
 
