@@ -97,6 +97,15 @@ export const api = {
     return { success: res.success, data: { ...res.ticket, ticket_messages: res.messages || [] } as TicketDetail }
   },
 
+  async searchCalls(params: { page?: number; limit?: number; status?: string; search?: string } = {}): Promise<{ success: boolean; data: CallLogEntry[]; pagination: { page: number; limit: number; total: number; pages: number } }> {
+    const query: Record<string, string> = {}
+    if (params.page) query.page = String(params.page)
+    if (params.limit) query.limit = String(params.limit)
+    if (params.status) query.status = params.status
+    if (params.search) query.search = params.search
+    return mobileFetch('/telefonie/calls', query)
+  },
+
   async getTicketStatuses(): Promise<{ success: boolean; statuses: TicketStatus[] }> {
     return mobileFetch('/tickets/config/statuses')
   },
@@ -257,6 +266,26 @@ export interface TicketAttachment {
 
 export interface TicketDetail extends Ticket {
   ticket_messages: TicketMessage[]
+}
+
+export interface CallLogEntry {
+  id: number
+  call_id: string | null
+  direction: 'in' | 'out'
+  from_number: string
+  to_number: string
+  caller_name: string | null
+  contact_name: string | null
+  status: 'ringing' | 'answered' | 'missed' | 'busy' | 'completed'
+  duration_seconds: number | null
+  started_at: string
+  answered_at: string | null
+  ended_at: string | null
+  customer_id: number | null
+  supplier_id: number | null
+  user_name: string | null
+  notes: string | null
+  created_at: string
 }
 
 export interface AuftragItem {
