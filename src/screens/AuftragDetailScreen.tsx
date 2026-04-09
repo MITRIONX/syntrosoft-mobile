@@ -3,7 +3,8 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ArrowLeft, User, MapPin, Package, Euro, Truck, CreditCard, Hash, FileText, FileCheck } from 'lucide-react-native'
 import { useQuery } from '@tanstack/react-query'
-import { api, Auftrag, AuftragDetail, AuftragItem, AuftragRelated } from '../lib/api'
+import { api, Auftrag, AuftragDetail, AuftragItem, AuftragRelated, PurchaseOrder } from '../lib/api'
+import { BestellungDetailScreen } from './BestellungDetailScreen'
 import { colors, spacing } from '../theme'
 
 interface AuftragDetailScreenProps {
@@ -135,7 +136,7 @@ function computeStatus(detail: AuftragDetail, related: AuftragRelated | undefine
   return { label: 'Offen', color: '#3b82f6' }
 }
 
-function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
+function FulfillmentCard({ related, onSelectPO }: { related: AuftragRelated | undefined; onSelectPO: (po: any) => void }) {
   const styles = createStyles()
   const fulfillStyles = createFulfillStyles()
   const po = related?.purchaseOrders || []
@@ -180,9 +181,9 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
           {po.length > 0 && (
             <FulfillmentSection title="Lieferantenbestellungen" icon={<Package size={13} color={colors.textMuted} />}>
               {po.map((p: any, i: number) => (
-                <View key={p.id || i} style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}>
+                <TouchableOpacity key={p.id || i} style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]} onPress={() => onSelectPO(p)} activeOpacity={0.7}>
                   <View style={fulfillStyles.rowMain}>
-                    <Text style={fulfillStyles.rowTitle}>{p.order_number}</Text>
+                    <Text style={[fulfillStyles.rowTitle, fulfillStyles.trackingLink]}>{p.order_number}</Text>
                     <Text style={fulfillStyles.rowSub} numberOfLines={1}>{p.supplier_name}</Text>
                   </View>
                   <View style={fulfillStyles.rowRight}>
@@ -193,7 +194,7 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
                     </View>
                     <Text style={fulfillStyles.rowDate}>{formatDate(p.order_date)}</Text>
                   </View>
-                </View>
+                </TouchableOpacity>
               ))}
             </FulfillmentSection>
           )}
@@ -341,6 +342,7 @@ export function AuftragDetailScreen({ auftrag, onBack }: AuftragDetailScreenProp
   const styles = createStyles()
   const insets = useSafeAreaInsets()
   const [expandedAddress, setExpandedAddress] = useState<'billing' | 'shipping' | null>(null)
+  const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['auftrag', auftrag.id],
@@ -368,6 +370,10 @@ export function AuftragDetailScreen({ auftrag, onBack }: AuftragDetailScreenProp
     null
 
   const hasShipping = detail?.shipping_street && detail.shipping_street !== detail.billing_street
+
+  if (selectedPO) {
+    return <BestellungDetailScreen order={selectedPO} onBack={() => setSelectedPO(null)} />
+  }
 
   return (
     <View style={styles.container}>
@@ -504,7 +510,22 @@ export function AuftragDetailScreen({ auftrag, onBack }: AuftragDetailScreenProp
           </View>
 
           {/* Fulfillment */}
-          <FulfillmentCard related={related} />
+          <FulfillmentCard related={related} onSelectPO={(po) => setSelectedPO({
+            id: po.id,
+            order_number: po.order_number,
+            supplier_name: po.supplier_name,
+            order_date: po.order_date,
+            status_text: po.status_text || po.status,
+            total_net: Number(po.total_net) || 0,
+            total_gross: Number(po.total_gross) || 0,
+            items_count: Number(po.items_count) || 0,
+            qty_total: Number(po.qty_total) || 0,
+            qty_delivered: Number(po.qty_delivered) || 0,
+            reference_order_number: po.reference_order_number,
+            is_dropshipping: po.is_dropshipping || 0,
+            warehouse_name: po.warehouse_name,
+            created_at: po.created_at,
+          })} />
 
           {/* Notizen */}
           {detail.notes && (
