@@ -17,12 +17,18 @@ function formatCurrency(amount: number): string {
 
 function formatDate(dateStr: string): string {
   if (!dateStr) return ''
-  const d = new Date(dateStr)
-  const day = String(d.getDate()).padStart(2, '0')
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const year = d.getFullYear()
-  const hours = String(d.getHours()).padStart(2, '0')
-  const mins = String(d.getMinutes()).padStart(2, '0')
+  const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(dateStr.trim())
+  if (isDateOnly) {
+    const [y, m, d] = dateStr.trim().split('-')
+    return `${d}.${m}.${y}`
+  }
+  const dt = new Date(dateStr)
+  if (isNaN(dt.getTime())) return ''
+  const day = String(dt.getDate()).padStart(2, '0')
+  const month = String(dt.getMonth() + 1).padStart(2, '0')
+  const year = dt.getFullYear()
+  const hours = String(dt.getHours()).padStart(2, '0')
+  const mins = String(dt.getMinutes()).padStart(2, '0')
   if (hours === '00' && mins === '00') return `${day}.${month}.${year}`
   return `${day}.${month}.${year} ${hours}:${mins}`
 }

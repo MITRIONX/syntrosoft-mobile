@@ -15,12 +15,19 @@ function formatCurrency(amount: number): string {
 
 function formatDate(dateStr: string): string {
   if (!dateStr) return ''
-  const d = new Date(dateStr)
-  const day = String(d.getDate()).padStart(2, '0')
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const year = d.getFullYear()
-  const hours = String(d.getHours()).padStart(2, '0')
-  const mins = String(d.getMinutes()).padStart(2, '0')
+  // Wenn nur Datum ohne Zeit (z.B. "2026-04-09"), keine Uhrzeit anzeigen
+  const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(dateStr.trim())
+  if (isDateOnly) {
+    const [y, m, d] = dateStr.trim().split('-')
+    return `${d}.${m}.${y}`
+  }
+  const dt = new Date(dateStr)
+  if (isNaN(dt.getTime())) return ''
+  const day = String(dt.getDate()).padStart(2, '0')
+  const month = String(dt.getMonth() + 1).padStart(2, '0')
+  const year = dt.getFullYear()
+  const hours = String(dt.getHours()).padStart(2, '0')
+  const mins = String(dt.getMinutes()).padStart(2, '0')
   if (hours === '00' && mins === '00') return `${day}.${month}.${year}`
   return `${day}.${month}.${year} ${hours}:${mins}`
 }
@@ -105,7 +112,7 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
             <Text style={styles.customerName} numberOfLines={1}>{customerName}</Text>
             <View style={styles.cardRow}>
               <Text style={styles.cardDetailText}>{item.items_count} Pos.</Text>
-              <Text style={styles.cardDetailText}>{(item as any).total_quantity || '?'} Stk.</Text>
+              <Text style={styles.cardDetailText}>{Math.round(Number((item as any).total_quantity) || 0)} Stk.</Text>
               <Text style={[styles.cardDetailText, styles.amount]}>{formatCurrency(item.total_gross)}</Text>
               <StatusBadge status={(item as any).computed_status || item.status} />
             </View>

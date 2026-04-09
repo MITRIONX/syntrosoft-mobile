@@ -3,13 +3,18 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, 
 import { useQuery } from '@tanstack/react-query'
 import { Search, Package } from 'lucide-react-native'
 import { api, PurchaseOrder } from '../lib/api'
+import { BestellungDetailScreen } from './BestellungDetailScreen'
 import { colors, spacing } from '../theme'
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return ''
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime())) return ''
-  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr.trim())) {
+    const [y, m, d] = dateStr.trim().split('-')
+    return `${d}.${m}.${y}`
+  }
+  const dt = new Date(dateStr)
+  if (isNaN(dt.getTime())) return ''
+  return `${String(dt.getDate()).padStart(2, '0')}.${String(dt.getMonth() + 1).padStart(2, '0')}.${dt.getFullYear()}`
 }
 
 function formatCurrency(value: number | null | undefined): string {
@@ -21,7 +26,11 @@ export function BestellungenScreen() {
   const styles = createStyles()
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  // Detail temporär deaktiviert zum Debuggen
+  const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null)
+
+  if (selectedOrder) {
+    return <BestellungDetailScreen order={selectedOrder} onBack={() => setSelectedOrder(null)} />
+  }
 
   const handleSearch = useCallback((text: string) => {
     setSearch(text)
@@ -47,7 +56,7 @@ export function BestellungenScreen() {
     const statusText = item.status_text || (isComplete ? 'Geliefert' : delivered > 0 ? 'Teillieferung' : 'Bestellt')
 
     return (
-      <View style={styles.card}>
+      <TouchableOpacity style={styles.card} onPress={() => setSelectedOrder(item)} activeOpacity={0.7}>
         <View style={styles.cardTop}>
           <View style={{ flex: 1 }}>
             <View style={styles.orderRow}>
@@ -70,7 +79,7 @@ export function BestellungenScreen() {
         {item.reference_order_number && (
           <Text style={styles.reference}>Auftrag: {item.reference_order_number}</Text>
         )}
-      </View>
+      </TouchableOpacity>
     )
   }
 
