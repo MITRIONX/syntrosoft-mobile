@@ -22,21 +22,21 @@ function formatDate(dateStr: string): string {
   return `${day}.${month}.${year}`
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  offen: '#3b82f6',
-  in_bearbeitung: '#f59e0b',
-  versendet: '#a855f7',
-  abgeschlossen: '#22c55e',
-  storniert: '#ef4444',
+const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
+  new: { color: '#f59e0b', label: 'Neu' },
+  offen: { color: '#3b82f6', label: 'Offen' },
+  in_bearbeitung: { color: '#f59e0b', label: 'In Bearbeitung' },
+  versendet: { color: '#a855f7', label: 'Versendet' },
+  abgeschlossen: { color: '#22c55e', label: 'Abgeschlossen' },
+  storniert: { color: '#ef4444', label: 'Storniert' },
 }
 
 function StatusBadge({ status }: { status: string }) {
   const styles = createStyles()
-  const color = STATUS_COLORS[status] || '#6b7280'
-  const label = status.replace(/_/g, ' ')
+  const config = STATUS_CONFIG[status.toLowerCase()] || { color: '#6b7280', label: status }
   return (
-    <View style={[styles.badge, { backgroundColor: color + '20', borderColor: color + '40' }]}>
-      <Text style={[styles.badgeText, { color }]}>{label}</Text>
+    <View style={[styles.badge, { backgroundColor: config.color + '25', borderColor: config.color + '50' }]}>
+      <Text style={[styles.badgeText, { color: config.color }]}>{config.label}</Text>
     </View>
   )
 }
