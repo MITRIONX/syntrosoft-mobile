@@ -51,16 +51,18 @@ type MenuItem = {
 
 const MENU_ITEMS: MenuItem[] = [
   { name: 'Kunden', icon: Users, label: 'Kunden' },
-  { name: 'Auftraege', icon: ShoppingCart, label: 'Aufträge' },
-  { name: 'Tickets', icon: MessageSquare, label: 'Tickets' },
-  { name: 'Telefon', icon: Phone, label: 'Telefon' },
-  { name: 'Versand', icon: Truck, label: 'Versand', children: [
-    { name: 'Sendungsverfolgung', icon: Truck, label: 'Sendungsverfolgung' },
-  ]},
   { name: 'Einkauf', icon: ShoppingBag, label: 'Einkauf', children: [
     { name: 'Einkaufsliste', icon: ClipboardList, label: 'Einkaufsliste' },
     { name: 'Bestellungen', icon: Package, label: 'Bestellungen' },
   ]},
+  { name: 'Verkauf', icon: ShoppingCart, label: 'Verkauf', children: [
+    { name: 'Auftraege', icon: ShoppingCart, label: 'Aufträge' },
+  ]},
+  { name: 'Versand', icon: Truck, label: 'Versand', children: [
+    { name: 'Sendungsverfolgung', icon: Truck, label: 'Sendungsverfolgung' },
+  ]},
+  { name: 'Tickets', icon: MessageSquare, label: 'Tickets' },
+  { name: 'Telefon', icon: Phone, label: 'Telefon' },
   { name: 'Einstellungen', icon: Settings, label: 'Einstellungen' },
 ]
 
