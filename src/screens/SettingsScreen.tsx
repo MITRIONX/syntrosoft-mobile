@@ -1,7 +1,8 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native'
-import { LogOut, Smartphone, Server, User } from 'lucide-react-native'
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Switch } from 'react-native'
+import { LogOut, Smartphone, Server, User, Sun, Moon } from 'lucide-react-native'
 import { ConnectionInfo, clearConnectionInfo } from '../lib/auth'
-import { colors, spacing } from '../theme'
+import { useTheme } from '../theme'
+import { spacing } from '../theme'
 
 interface SettingsScreenProps {
   connection: ConnectionInfo
@@ -9,6 +10,9 @@ interface SettingsScreenProps {
 }
 
 export function SettingsScreen({ connection, onDisconnect }: SettingsScreenProps) {
+  const { mode, colors, toggle } = useTheme()
+  const isDark = mode === 'dark'
+
   const handleDisconnect = () => {
     Alert.alert(
       'Verbindung trennen',
@@ -28,41 +32,57 @@ export function SettingsScreen({ connection, onDisconnect }: SettingsScreenProps
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Verbindung</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Verbindung</Text>
 
-        <View style={styles.row}>
+        <View style={[styles.row, { borderBottomColor: colors.border }]}>
           <Server size={16} color={colors.textMuted} />
           <View style={styles.rowContent}>
-            <Text style={styles.rowLabel}>Firma</Text>
-            <Text style={styles.rowValue}>{connection.tenantName}</Text>
+            <Text style={[styles.rowLabel, { color: colors.textMuted }]}>Firma</Text>
+            <Text style={[styles.rowValue, { color: colors.text }]}>{connection.tenantName}</Text>
           </View>
         </View>
 
-        <View style={styles.row}>
+        <View style={[styles.row, { borderBottomColor: colors.border }]}>
           <User size={16} color={colors.textMuted} />
           <View style={styles.rowContent}>
-            <Text style={styles.rowLabel}>Benutzer</Text>
-            <Text style={styles.rowValue}>{connection.userName}</Text>
+            <Text style={[styles.rowLabel, { color: colors.textMuted }]}>Benutzer</Text>
+            <Text style={[styles.rowValue, { color: colors.text }]}>{connection.userName}</Text>
           </View>
         </View>
 
-        <View style={styles.row}>
+        <View style={[styles.row, { borderBottomColor: colors.border }]}>
           <Smartphone size={16} color={colors.textMuted} />
           <View style={styles.rowContent}>
-            <Text style={styles.rowLabel}>Server</Text>
-            <Text style={styles.rowValue}>{connection.serverUrl}</Text>
+            <Text style={[styles.rowLabel, { color: colors.textMuted }]}>Server</Text>
+            <Text style={[styles.rowValue, { color: colors.text }]}>{connection.serverUrl}</Text>
           </View>
         </View>
       </View>
 
-      <TouchableOpacity style={styles.disconnectButton} onPress={handleDisconnect}>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Darstellung</Text>
+        <View style={[styles.row, { borderBottomWidth: 0 }]}>
+          {isDark ? <Moon size={16} color={colors.textMuted} /> : <Sun size={16} color={colors.warning} />}
+          <View style={styles.rowContent}>
+            <Text style={[styles.rowValue, { color: colors.text }]}>{isDark ? 'Dunkles Design' : 'Helles Design'}</Text>
+          </View>
+          <Switch
+            value={isDark}
+            onValueChange={toggle}
+            trackColor={{ false: '#ccc', true: colors.primary + '60' }}
+            thumbColor={isDark ? colors.primary : '#f4f3f4'}
+          />
+        </View>
+      </View>
+
+      <TouchableOpacity style={[styles.disconnectButton, { backgroundColor: colors.surface, borderColor: colors.danger + '30' }]} onPress={handleDisconnect}>
         <LogOut size={18} color={colors.danger} />
-        <Text style={styles.disconnectText}>Verbindung trennen</Text>
+        <Text style={[styles.disconnectText, { color: colors.danger }]}>Verbindung trennen</Text>
       </TouchableOpacity>
 
-      <Text style={styles.version}>SyntroSoft Mobile v1.0.0</Text>
+      <Text style={[styles.version, { color: colors.textMuted }]}>SyntroSoft Mobile v1.5.2</Text>
     </View>
   )
 }
@@ -70,21 +90,17 @@ export function SettingsScreen({ connection, onDisconnect }: SettingsScreenProps
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
     padding: spacing.md,
   },
   card: {
-    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
     marginBottom: spacing.lg,
   },
   sectionTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: spacing.md,
@@ -95,18 +111,15 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   rowContent: {
     flex: 1,
   },
   rowLabel: {
     fontSize: 12,
-    color: colors.textMuted,
   },
   rowValue: {
     fontSize: 15,
-    color: colors.text,
     marginTop: 2,
   },
   disconnectButton: {
@@ -114,20 +127,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.danger + '30',
   },
   disconnectText: {
     fontSize: 15,
     fontWeight: '500',
-    color: colors.danger,
   },
   version: {
     textAlign: 'center',
-    color: colors.textMuted,
     fontSize: 12,
     marginTop: spacing.xl,
   },

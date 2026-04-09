@@ -7,6 +7,7 @@ import { createDrawerNavigator, DrawerContentScrollView, DrawerContentComponentP
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Users, Settings, Menu, ShoppingCart, MessageSquare } from 'lucide-react-native'
+import * as SecureStore from 'expo-secure-store'
 import { getConnectionInfo, ConnectionInfo } from './src/lib/auth'
 import { checkForUpdate } from './src/lib/updater'
 import { Kunde, Auftrag, Ticket } from './src/lib/api'
@@ -18,22 +19,25 @@ import { AuftragDetailScreen } from './src/screens/AuftragDetailScreen'
 import { TicketsScreen } from './src/screens/TicketsScreen'
 import { TicketDetailScreen } from './src/screens/TicketDetailScreen'
 import { SettingsScreen } from './src/screens/SettingsScreen'
-import { colors } from './src/theme'
+import { colors, darkColors, lightColors, setThemeColors, ThemeContext, ThemeMode } from './src/theme'
 
 const queryClient = new QueryClient()
 const Drawer = createDrawerNavigator()
 
-const DarkTheme = {
-  ...DefaultTheme,
-  dark: true,
-  colors: {
-    ...DefaultTheme.colors,
-    primary: colors.primary,
-    background: colors.background,
-    card: colors.surface,
-    text: colors.text,
-    border: colors.border,
-  },
+function getNavTheme(isDark: boolean) {
+  const c = isDark ? darkColors : lightColors
+  return {
+    ...DefaultTheme,
+    dark: isDark,
+    colors: {
+      ...DefaultTheme.colors,
+      primary: c.primary,
+      background: c.background,
+      card: c.surface,
+      text: c.text,
+      border: c.border,
+    },
+  }
 }
 
 const MENU_ITEMS = [
@@ -157,12 +161,27 @@ function SettingsPage({ navigation }: any) {
 export default function App() {
   const [connection, setConnection] = useState<ConnectionInfo | null>(null)
   const [loading, setLoading] = useState(true)
+  const [themeMode, setThemeMode] = useState<ThemeMode>('dark')
 
   _connection = connection
   _onDisconnect = () => setConnection(null)
 
+  const toggleTheme = () => {
+    const newMode = themeMode === 'dark' ? 'light' : 'dark'
+    setThemeColors(newMode === 'dark')
+    setThemeMode(newMode)
+    SecureStore.setItemAsync('theme', newMode)
+  }
+
   useEffect(() => {
-    getConnectionInfo().then((info) => {
+    Promise.all([
+      getConnectionInfo(),
+      SecureStore.getItemAsync('theme'),
+    ]).then(([info, savedTheme]) => {
+      if (savedTheme === 'light' || savedTheme === 'dark') {
+        setThemeMode(savedTheme)
+        setThemeColors(savedTheme === 'dark')
+      }
       setConnection(info)
       setLoading(false)
     })
@@ -171,41 +190,49 @@ export default function App() {
 
   if (loading) return null
 
+  const isDark = themeMode === 'dark'
+  const themeColors = isDark ? darkColors : lightColors
+  const themeCtx = { mode: themeMode, colors: themeColors, toggle: toggleTheme }
+
   if (!connection) {
     return (
-      <SafeAreaProvider>
-        <StatusBar style="light" />
-        <ScanScreen onPaired={async () => {
-          const info = await getConnectionInfo()
-          setConnection(info)
-        }} />
-      </SafeAreaProvider>
+      <ThemeContext.Provider value={themeCtx}>
+        <SafeAreaProvider>
+          <StatusBar style={isDark ? 'light' : 'dark'} />
+          <ScanScreen onPaired={async () => {
+            const info = await getConnectionInfo()
+            setConnection(info)
+          }} />
+        </SafeAreaProvider>
+      </ThemeContext.Provider>
     )
   }
 
   return (
-    <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
-        <NavigationContainer theme={DarkTheme}>
-          <StatusBar style="light" />
-          <Drawer.Navigator
-            drawerContent={(props) => <CustomDrawerContent {...props} />}
-            screenOptions={{
-              headerShown: false,
-              drawerStyle: {
-                backgroundColor: colors.surface,
-                width: 260,
-              },
-            }}
-          >
-            <Drawer.Screen name="Kunden" component={KundenPage} />
-            <Drawer.Screen name="Auftraege" component={AuftraegePage} />
-            <Drawer.Screen name="Tickets" component={TicketsPage} />
-            <Drawer.Screen name="Einstellungen" component={SettingsPage} />
-          </Drawer.Navigator>
-        </NavigationContainer>
-      </QueryClientProvider>
-    </SafeAreaProvider>
+    <ThemeContext.Provider value={themeCtx}>
+      <SafeAreaProvider key={themeMode}>
+        <QueryClientProvider client={queryClient}>
+          <NavigationContainer theme={getNavTheme(isDark)}>
+            <StatusBar style={isDark ? 'light' : 'dark'} />
+            <Drawer.Navigator
+              drawerContent={(props) => <CustomDrawerContent {...props} />}
+              screenOptions={{
+                headerShown: false,
+                drawerStyle: {
+                  backgroundColor: themeColors.surface,
+                  width: 260,
+                },
+              }}
+            >
+              <Drawer.Screen name="Kunden" component={KundenPage} />
+              <Drawer.Screen name="Auftraege" component={AuftraegePage} />
+              <Drawer.Screen name="Tickets" component={TicketsPage} />
+              <Drawer.Screen name="Einstellungen" component={SettingsPage} />
+            </Drawer.Navigator>
+          </NavigationContainer>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </ThemeContext.Provider>
   )
 }
 
