@@ -23,7 +23,7 @@ function timeAgo(dateStr: string): string {
 }
 
 function ColorBadge({ name, color }: { name: string; color: string }) {
-  const bg = color.startsWith('#') ? color : '#6b7280'
+  const bg = color && color.startsWith('#') ? color : '#6b7280'
   return (
     <View style={[styles.badge, { backgroundColor: bg + '25', borderColor: bg + '50' }]}>
       <Text style={[styles.badgeText, { color: bg }]}>{name}</Text>
@@ -112,14 +112,14 @@ export function TicketDetailScreen({ ticket, onBack }: TicketDetailScreenProps) 
         </View>
       ) : error ? (
         <View style={styles.centered}>
-          <Text style={styles.errorText}>{(error as Error).message}</Text>
+          <Text style={styles.errorText}>{String((error as Error)?.message || 'Unbekannter Fehler')}</Text>
         </View>
       ) : detail ? (
         <>
           {/* Meta info bar */}
           <View style={styles.metaBar}>
             <View style={styles.metaRow}>
-              <ColorBadge name={detail.status_name} color={detail.status_color} />
+              {detail.status_name && <ColorBadge name={detail.status_name} color={detail.status_color} />}
               {detail.priority_name && detail.priority_color && (
                 <ColorBadge name={detail.priority_name} color={detail.priority_color} />
               )}

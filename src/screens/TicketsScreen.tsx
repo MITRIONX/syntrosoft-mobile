@@ -21,7 +21,7 @@ function timeAgo(dateStr: string): string {
 }
 
 function StatusBadge({ name, color }: { name: string; color: string }) {
-  const bg = color.startsWith('#') ? color : '#6b7280'
+  const bg = color && color.startsWith('#') ? color : '#6b7280'
   return (
     <View style={[styles.badge, { backgroundColor: bg + '25', borderColor: bg + '50' }]}>
       <Text style={[styles.badgeText, { color: bg }]}>{name}</Text>
@@ -61,7 +61,7 @@ export function TicketsScreen({ onSelectTicket }: TicketsScreenProps) {
             <Text style={styles.ticketNumber}>#{item.ticket_number}</Text>
             <Text style={styles.subject} numberOfLines={1}>{item.subject}</Text>
           </View>
-          <StatusBadge name={item.status_name} color={item.status_color} />
+          {item.status_name && <StatusBadge name={item.status_name} color={item.status_color} />}
         </View>
 
         <View style={styles.cardRow}>
