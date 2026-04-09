@@ -133,8 +133,11 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
   const styles = createStyles()
   const fulfillStyles = createFulfillStyles()
   const po = related?.purchaseOrders || []
-  const labels = related?.shippingLabels || []
+  const allLabels = related?.shippingLabels || []
   const tracking = related?.trackingData || []
+  // Labels rausfiltern die schon als Tracking-Eintrag existieren (Tracking hat mehr Infos)
+  const trackingNumbers = new Set(tracking.map((t: any) => t.trackingnummer))
+  const labels = allLabels.filter((l: any) => !trackingNumbers.has(l.tracking_number))
   const belege = related?.eingangsbelege || []
   const allAbLogs = (related as any)?.abLogs || []
   // Rechnungen aus AB-Logs herausfiltern und zu Eingangsrechnungen verschieben
