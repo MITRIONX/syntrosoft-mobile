@@ -6,11 +6,11 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native'
 import { createDrawerNavigator, DrawerContentScrollView, DrawerContentComponentProps } from '@react-navigation/drawer'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Users, Settings, Menu, ShoppingCart, MessageSquare, Phone, Truck, ShoppingBag, ChevronDown, ChevronRight, ClipboardList, Package } from 'lucide-react-native'
+import { Users, Settings, Menu, ShoppingCart, MessageSquare, Phone, Truck, ShoppingBag, ChevronDown, ChevronRight, ClipboardList, Package, FileText, Receipt } from 'lucide-react-native'
 import * as SecureStore from 'expo-secure-store'
 import { getConnectionInfo, ConnectionInfo } from './src/lib/auth'
 import { checkForUpdate } from './src/lib/updater'
-import { Kunde, Auftrag, Ticket } from './src/lib/api'
+import { Kunde, Auftrag, Ticket, Quote, Invoice } from './src/lib/api'
 import { ScanScreen } from './src/screens/ScanScreen'
 import { KundenScreen } from './src/screens/KundenScreen'
 import { KundeDetailScreen } from './src/screens/KundeDetailScreen'
@@ -23,6 +23,8 @@ import { TelefonScreen } from './src/screens/TelefonScreen'
 import { SendungsverfolgungScreen } from './src/screens/SendungsverfolgungScreen'
 import { EinkaufslisteScreen } from './src/screens/EinkaufslisteScreen'
 import { BestellungenScreen } from './src/screens/BestellungenScreen'
+import { AngeboteScreen } from './src/screens/AngeboteScreen'
+import { RechnungenScreen } from './src/screens/RechnungenScreen'
 import { colors, darkColors, lightColors, setThemeColors, ThemeContext, ThemeMode } from './src/theme'
 
 const queryClient = new QueryClient()
@@ -57,6 +59,8 @@ const MENU_ITEMS: MenuItem[] = [
   ]},
   { name: 'Verkauf', icon: ShoppingCart, label: 'Verkauf', children: [
     { name: 'Auftraege', icon: ShoppingCart, label: 'Aufträge' },
+    { name: 'Angebote', icon: FileText, label: 'Angebote' },
+    { name: 'Rechnungen', icon: Receipt, label: 'Rechnungen' },
   ]},
   { name: 'Versand', icon: Truck, label: 'Versand', children: [
     { name: 'Sendungsverfolgung', icon: Truck, label: 'Sendungsverfolgung' },
@@ -229,6 +233,26 @@ function EinkaufslistePage({ navigation }: any) {
   )
 }
 
+function AngebotePage({ navigation }: any) {
+  const styles = createStyles()
+  return (
+    <View style={styles.screenContainer}>
+      <ScreenHeader title="Angebote" navigation={navigation} />
+      <AngeboteScreen />
+    </View>
+  )
+}
+
+function RechnungenPage({ navigation }: any) {
+  const styles = createStyles()
+  return (
+    <View style={styles.screenContainer}>
+      <ScreenHeader title="Rechnungen" navigation={navigation} />
+      <RechnungenScreen />
+    </View>
+  )
+}
+
 function BestellungenPage({ navigation }: any) {
   const styles = createStyles()
   return (
@@ -323,6 +347,8 @@ export default function App() {
             >
               <Drawer.Screen name="Kunden" component={KundenPage} />
               <Drawer.Screen name="Auftraege" component={AuftraegePage} />
+              <Drawer.Screen name="Angebote" component={AngebotePage} />
+              <Drawer.Screen name="Rechnungen" component={RechnungenPage} />
               <Drawer.Screen name="Tickets" component={TicketsPage} />
               <Drawer.Screen name="Telefon" component={TelefonPage} />
               <Drawer.Screen name="Sendungsverfolgung" component={VersandPage} />

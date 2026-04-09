@@ -137,6 +137,30 @@ export const api = {
     return mobileFetch(`/versand/purchase-orders/${id}/items`)
   },
 
+  async searchQuotes(params: { search?: string; limit?: number; offset?: number } = {}): Promise<{ success: boolean; data: Quote[]; total?: number }> {
+    const query: Record<string, string> = {}
+    if (params.search) query.search = params.search
+    if (params.limit) query.limit = String(params.limit)
+    if (params.offset) query.offset = String(params.offset)
+    return mobileFetch('/versand/quotes', query)
+  },
+
+  async getQuoteItems(id: number): Promise<{ success: boolean; data: QuoteItem[] }> {
+    return mobileFetch(`/versand/quotes/${id}/items`)
+  },
+
+  async searchInvoices(params: { search?: string; limit?: number; offset?: number } = {}): Promise<{ success: boolean; data: Invoice[]; total?: number }> {
+    const query: Record<string, string> = {}
+    if (params.search) query.search = params.search
+    if (params.limit) query.limit = String(params.limit)
+    if (params.offset) query.offset = String(params.offset)
+    return mobileFetch('/versand/rechnungen', query)
+  },
+
+  async getInvoiceItems(id: number): Promise<{ success: boolean; data: InvoiceItem[] }> {
+    return mobileFetch(`/versand/rechnungen/${id}/items`)
+  },
+
   async searchTracking(params: { search?: string; status?: string; limit?: number; offset?: number } = {}): Promise<{ success: boolean; data: TrackingEntry[]; total?: number }> {
     const query: Record<string, string> = {}
     if (params.search) query.search = params.search
@@ -221,6 +245,60 @@ export const api = {
     if (!conn) return
     Linking.openURL(`${conn.serverUrl}/api/mobile/auftraege/attachment/${attachmentId}?token=${conn.deviceToken}`)
   },
+}
+
+export interface Quote {
+  id: number
+  quote_number: string
+  customer_display_name: string | null
+  quote_date: string | null
+  valid_until: string | null
+  status: string
+  total_net: number
+  total_gross: number
+  items_count: number
+  is_cancelled: boolean
+  created_at: string
+}
+
+export interface QuoteItem {
+  id: number
+  position_number: number
+  article_number: string | null
+  article_name: string | null
+  quantity: number
+  unit: string
+  unit_price_net: number
+  total_net: number
+  total_gross: number
+}
+
+export interface Invoice {
+  id: number
+  invoice_number: string
+  customer_name: string | null
+  invoice_date: string | null
+  due_date: string | null
+  total_net: number
+  total_gross: number
+  status: string
+  payment_status: string | null
+  outstanding_amount: number | null
+  is_cancelled: boolean
+  items_count: number
+}
+
+export interface InvoiceItem {
+  id: number
+  position_number: number
+  article_number: string | null
+  article_name: string | null
+  quantity: number
+  unit: string
+  unit_price_net: number
+  total_net: number
+  total_gross: number
+  tax_rate: number
 }
 
 export interface Auftrag {
