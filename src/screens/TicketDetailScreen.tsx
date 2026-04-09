@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react'
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Linking } from 'react-native'
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Linking, Modal, ScrollView } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { ArrowLeft, Lock, User, Bot, Settings, Paperclip, FileText, Image as ImageIcon, File } from 'lucide-react-native'
-import { useQuery } from '@tanstack/react-query'
+import { ArrowLeft, Lock, User, Bot, Settings, Paperclip, FileText, Image as ImageIcon, File, ChevronDown, X, Check } from 'lucide-react-native'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { WebView } from 'react-native-webview'
-import { api, Ticket, TicketMessage, TicketAttachment, TicketDetail } from '../lib/api'
+import { api, Ticket, TicketMessage, TicketAttachment, TicketDetail, TicketStatus, TicketAgent } from '../lib/api'
 import { colors, spacing } from '../theme'
 
 interface TicketDetailScreenProps {
@@ -40,12 +40,53 @@ function timeAgo(dateStr: string | null | undefined): string {
   return new Date(dateStr).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-function ColorBadge({ name, color }: { name: string; color: string }) {
+function ColorBadge({ name, color, onPress }: { name: string; color: string; onPress?: () => void }) {
   const bg = color && color.startsWith('#') ? color : '#6b7280'
-  return (
+  const content = (
     <View style={[styles.badge, { backgroundColor: bg + '25', borderColor: bg + '50' }]}>
       <Text style={[styles.badgeText, { color: bg }]}>{name}</Text>
+      {onPress && <ChevronDown size={10} color={bg} style={{ marginLeft: 2 }} />}
     </View>
+  )
+  if (onPress) {
+    return <TouchableOpacity onPress={onPress} activeOpacity={0.7}>{content}</TouchableOpacity>
+  }
+  return content
+}
+
+function PickerModal<T extends { id: number; name: string; color?: string }>({ visible, title, items, selectedId, onSelect, onClose, allowNone }: {
+  visible: boolean; title: string; items: T[]; selectedId: number | null; onSelect: (id: number | null) => void; onClose: () => void; allowNone?: boolean
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{title}</Text>
+            <TouchableOpacity onPress={onClose}><X size={20} color={colors.text} /></TouchableOpacity>
+          </View>
+          <ScrollView style={styles.modalList}>
+            {allowNone && (
+              <TouchableOpacity style={styles.modalItem} onPress={() => { onSelect(null); onClose() }}>
+                <Text style={styles.modalItemText}>— Nicht zugewiesen —</Text>
+                {selectedId === null && <Check size={16} color={colors.primary} />}
+              </TouchableOpacity>
+            )}
+            {items.map(item => {
+              const isSelected = item.id === selectedId
+              const itemColor = (item as any).color
+              return (
+                <TouchableOpacity key={item.id} style={styles.modalItem} onPress={() => { onSelect(item.id); onClose() }}>
+                  {itemColor && <View style={[styles.modalDot, { backgroundColor: itemColor }]} />}
+                  <Text style={[styles.modalItemText, isSelected && { color: colors.primary, fontWeight: '600' }]}>{item.name}</Text>
+                  {isSelected && <Check size={16} color={colors.primary} />}
+                </TouchableOpacity>
+              )
+            })}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
   )
 }
 
@@ -206,6 +247,9 @@ function MessageBubble({ msg, attachments }: { msg: TicketMessage; attachments: 
 export function TicketDetailScreen({ ticket, onBack }: TicketDetailScreenProps) {
   const insets = useSafeAreaInsets()
   const listRef = useRef<FlatList>(null)
+  const queryClient = useQueryClient()
+  const [statusModalVisible, setStatusModalVisible] = useState(false)
+  const [agentModalVisible, setAgentModalVisible] = useState(false)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['ticket', ticket.id],
@@ -217,10 +261,42 @@ export function TicketDetailScreen({ ticket, onBack }: TicketDetailScreenProps) 
     queryFn: () => api.getTicketAttachments(ticket.id),
   })
 
+  const { data: statusesData } = useQuery({
+    queryKey: ['ticket-statuses'],
+    queryFn: () => api.getTicketStatuses(),
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const { data: agentsData } = useQuery({
+    queryKey: ['ticket-agents'],
+    queryFn: () => api.getTicketAgents(),
+    staleTime: 5 * 60 * 1000,
+  })
+
   const detail: TicketDetail | undefined = data?.data
   const messages = detail?.ticket_messages || []
   const attachments = attachmentsData?.attachments || []
+  const statuses = (statusesData?.statuses || []).filter((s: TicketStatus) => s.is_active)
+  const agents = (agentsData?.agents || []).filter((a: TicketAgent) => a.is_active)
   const contactName = ticket.customer_display_name || ticket.supplier_display_name || ticket.customer_email || null
+
+  const handleUpdateStatus = async (statusId: number | null) => {
+    if (!statusId || !detail) return
+    try {
+      await api.updateTicket(ticket.id, { status_id: statusId })
+      queryClient.invalidateQueries({ queryKey: ['ticket', ticket.id] })
+      queryClient.invalidateQueries({ queryKey: ['tickets'] })
+    } catch {}
+  }
+
+  const handleUpdateAgent = async (agentId: number | null) => {
+    if (!detail) return
+    try {
+      await api.updateTicket(ticket.id, { assigned_user_id: agentId })
+      queryClient.invalidateQueries({ queryKey: ['ticket', ticket.id] })
+      queryClient.invalidateQueries({ queryKey: ['tickets'] })
+    } catch {}
+  }
 
   return (
     <View style={styles.container}>
@@ -248,7 +324,7 @@ export function TicketDetailScreen({ ticket, onBack }: TicketDetailScreenProps) 
           {/* Meta info bar */}
           <View style={styles.metaBar}>
             <View style={styles.metaRow}>
-              {detail.status_name && <ColorBadge name={detail.status_name} color={detail.status_color} />}
+              {detail.status_name && <ColorBadge name={detail.status_name} color={detail.status_color} onPress={() => setStatusModalVisible(true)} />}
               {detail.priority_name && detail.priority_color && (
                 <ColorBadge name={detail.priority_name} color={detail.priority_color} />
               )}
@@ -259,6 +335,11 @@ export function TicketDetailScreen({ ticket, onBack }: TicketDetailScreenProps) 
                 </View>
               )}
             </View>
+            <TouchableOpacity style={styles.contactRow} onPress={() => setAgentModalVisible(true)} activeOpacity={0.7}>
+              <User size={12} color={colors.textMuted} />
+              <Text style={styles.contactText}>{(detail as any).assigned_to || 'Nicht zugewiesen'}</Text>
+              <ChevronDown size={12} color={colors.textMuted} />
+            </TouchableOpacity>
             {contactName && (
               <View style={styles.contactRow}>
                 <User size={12} color={colors.textMuted} />
@@ -285,6 +366,25 @@ export function TicketDetailScreen({ ticket, onBack }: TicketDetailScreenProps) 
           )}
         </>
       ) : null}
+
+      <PickerModal
+        visible={statusModalVisible}
+        title="Status ändern"
+        items={statuses}
+        selectedId={(detail as any)?.status_id || null}
+        onSelect={handleUpdateStatus}
+        onClose={() => setStatusModalVisible(false)}
+      />
+
+      <PickerModal
+        visible={agentModalVisible}
+        title="Bearbeiter zuweisen"
+        items={agents}
+        selectedId={(detail as any)?.assigned_user_id || null}
+        onSelect={handleUpdateAgent}
+        onClose={() => setAgentModalVisible(false)}
+        allowNone
+      />
     </View>
   )
 }
@@ -484,6 +584,53 @@ const styles = StyleSheet.create({
   attachmentSize: {
     fontSize: 10,
     color: colors.textMuted,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: '60%',
+    paddingBottom: 30,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  modalList: {
+    paddingHorizontal: spacing.md,
+  },
+  modalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: 10,
+  },
+  modalDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  modalItemText: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.text,
   },
   // System / internal note
   systemNote: {

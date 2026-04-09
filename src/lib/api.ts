@@ -20,6 +20,23 @@ async function mobileFetch<T>(path: string, params?: Record<string, string>): Pr
   return res.json()
 }
 
+async function mobilePut<T>(path: string, body: Record<string, any>): Promise<T> {
+  const conn = await getConnectionInfo()
+  if (!conn) throw new Error('Nicht verbunden')
+
+  const res = await fetch(`${conn.serverUrl}/api/mobile${path}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${conn.deviceToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  })
+
+  if (!res.ok) throw new Error(`Fehler: ${res.status}`)
+  return res.json()
+}
+
 export interface Kunde {
   id: number
   customer_number: string
@@ -78,6 +95,18 @@ export const api = {
   async getTicket(id: number): Promise<{ success: boolean; data: TicketDetail }> {
     const res = await mobileFetch<{ success: boolean; ticket: Ticket; messages: TicketMessage[] }>(`/tickets/${id}`)
     return { success: res.success, data: { ...res.ticket, ticket_messages: res.messages || [] } as TicketDetail }
+  },
+
+  async getTicketStatuses(): Promise<{ success: boolean; statuses: TicketStatus[] }> {
+    return mobileFetch('/tickets/config/statuses')
+  },
+
+  async getTicketAgents(): Promise<{ success: boolean; agents: TicketAgent[] }> {
+    return mobileFetch('/tickets/config/agents')
+  },
+
+  async updateTicket(id: number, updates: { status_id?: number; assigned_user_id?: number | null }): Promise<{ success: boolean }> {
+    return mobilePut(`/tickets/${id}`, updates)
   },
 
   async getTicketAttachments(ticketId: number): Promise<{ success: boolean; attachments: TicketAttachment[] }> {
@@ -183,6 +212,21 @@ export interface TicketMessage {
   is_internal_note: boolean
   has_attachments: boolean
   created_at: string
+}
+
+export interface TicketStatus {
+  id: number
+  name: string
+  color: string
+  is_final: boolean
+  is_active: boolean
+}
+
+export interface TicketAgent {
+  id: number
+  name: string
+  email: string
+  is_active: boolean
 }
 
 export interface TicketAttachment {
