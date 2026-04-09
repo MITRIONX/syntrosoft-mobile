@@ -40,7 +40,8 @@ const PAYMENT_STATUS_COLORS: Record<string, string> = {
   overdue: '#ef4444',
 }
 
-function statusLabel(status: string): string {
+function statusLabel(status: string | null | undefined): string {
+  if (!status) return 'Unbekannt'
   const labels: Record<string, string> = {
     draft: 'Entwurf',
     sent: 'Versendet',
@@ -50,7 +51,7 @@ function statusLabel(status: string): string {
   return labels[status.toLowerCase()] || status
 }
 
-function paymentStatusLabel(status: string | null): string {
+function paymentStatusLabel(status: string | null | undefined): string {
   if (!status) return 'Offen'
   const labels: Record<string, string> = {
     paid: 'Bezahlt',
@@ -142,7 +143,7 @@ export function RechnungDetailScreen({ invoice, onBack }: Props) {
             items.map((item: InvoiceItem, index: number) => (
               <View key={item.id} style={[styles.positionRow, index > 0 && styles.positionRowBorder]}>
                 <View style={styles.positionLeft}>
-                  <Text style={styles.positionNumber}>{item.position_number}.</Text>
+                  <Text style={styles.positionNumber}>{item.position_number || index + 1}.</Text>
                 </View>
                 <View style={styles.positionInfo}>
                   {item.article_number && (
