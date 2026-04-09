@@ -28,21 +28,6 @@ export function BestellungenScreen() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null)
 
-  if (selectedOrder) {
-    try {
-      return <BestellungDetailScreen order={selectedOrder} onBack={() => setSelectedOrder(null)} />
-    } catch (e: any) {
-      return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background, padding: 20 }}>
-          <Text style={{ color: colors.danger, fontSize: 16, textAlign: 'center' }}>Fehler: {e?.message || 'Unbekannt'}</Text>
-          <TouchableOpacity onPress={() => setSelectedOrder(null)} style={{ marginTop: 20, padding: 12, backgroundColor: colors.primary, borderRadius: 8 }}>
-            <Text style={{ color: '#fff' }}>Zurück</Text>
-          </TouchableOpacity>
-        </View>
-      )
-    }
-  }
-
   const handleSearch = useCallback((text: string) => {
     setSearch(text)
     const timeout = setTimeout(() => setDebouncedSearch(text), 300)
@@ -58,6 +43,10 @@ export function BestellungenScreen() {
   })
 
   const orders = Array.isArray(data?.data) ? data.data : []
+
+  if (selectedOrder) {
+    return <BestellungDetailScreen order={selectedOrder} onBack={() => setSelectedOrder(null)} />
+  }
 
   const renderOrder = ({ item }: { item: PurchaseOrder }) => {
     const delivered = (item.qty_delivered || 0)
