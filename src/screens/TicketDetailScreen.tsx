@@ -1,9 +1,9 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Linking } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ArrowLeft, Lock, User, Bot, Settings, Paperclip, FileText, Image as ImageIcon, File } from 'lucide-react-native'
 import { useQuery } from '@tanstack/react-query'
-// HTML-Rendering deaktiviert - Plain-Text ist zuverlaessiger
+import { WebView } from 'react-native-webview'
 import { api, Ticket, TicketMessage, TicketAttachment, TicketDetail } from '../lib/api'
 import { colors, spacing } from '../theme'
 
@@ -50,6 +50,51 @@ function ColorBadge({ name, color }: { name: string; color: string }) {
 }
 
 function MessageContent({ msg, isAgent }: { msg: TicketMessage; isAgent: boolean }) {
+  const [webViewHeight, setWebViewHeight] = useState(100)
+
+  if (msg.body_html) {
+    const darkModeWrapper = `
+      <html><head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+        <style>
+          * { color: ${colors.text} !important; background-color: transparent !important; }
+          body { margin: 0; padding: 0; font-family: -apple-system, sans-serif; font-size: 14px; line-height: 1.5; }
+          a { color: ${colors.primary} !important; }
+          img { max-width: 100% !important; height: auto !important; }
+          table { max-width: 100% !important; }
+          td, th { color: ${colors.text} !important; }
+        </style>
+      </head><body>${msg.body_html}</body></html>
+    `
+    return (
+      <View style={{ minHeight: 60, height: webViewHeight }}>
+        <WebView
+          source={{ html: darkModeWrapper }}
+          style={{ backgroundColor: 'transparent', opacity: 0.99 }}
+          scrollEnabled={false}
+          originWhitelist={['*']}
+          onMessage={(e) => {
+            const h = parseInt(e.nativeEvent.data, 10)
+            if (h > 0) setWebViewHeight(h + 16)
+          }}
+          injectedJavaScript={`
+            setTimeout(() => {
+              window.ReactNativeWebView.postMessage(String(document.body.scrollHeight));
+            }, 300);
+            true;
+          `}
+          onShouldStartLoadWithRequest={(req) => {
+            if (req.url !== 'about:blank' && !req.url.startsWith('data:')) {
+              Linking.openURL(req.url)
+              return false
+            }
+            return true
+          }}
+        />
+      </View>
+    )
+  }
+
   const bodyText = decodeHtmlEntities(msg.body) || '(Kein Textinhalt)'
   return (
     <Text style={[styles.bubbleBody, isAgent ? styles.bubbleBodyAgent : styles.bubbleBodyCustomer]} selectable>
