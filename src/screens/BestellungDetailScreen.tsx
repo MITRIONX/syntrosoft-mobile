@@ -23,6 +23,7 @@ function formatCurrency(value: number | null | undefined): string {
 }
 
 export function BestellungDetailScreen({ order, onBack }: Props) {
+  if (!order) return null
   const styles = createStyles()
   const insets = useSafeAreaInsets()
 
