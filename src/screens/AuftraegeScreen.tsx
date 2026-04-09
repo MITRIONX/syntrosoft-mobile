@@ -85,7 +85,6 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
             </View>
             <Text style={styles.customerName} numberOfLines={1}>{customerName}</Text>
           </View>
-          <StatusBadge status={(item as any).computed_status || item.status} />
         </View>
 
         <View style={styles.cardRow}>
@@ -97,6 +96,7 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
             <Euro size={12} color={colors.textMuted} />
             <Text style={[styles.cardDetailText, styles.amount]}>{formatCurrency(item.total_gross)}</Text>
           </View>
+          <StatusBadge status={(item as any).computed_status || item.status} />
         </View>
       </TouchableOpacity>
     )
