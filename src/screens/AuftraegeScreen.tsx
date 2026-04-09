@@ -201,8 +201,8 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
     setFulfillLoading(false)
   }
 
-  const submitFulfillment = async () => {
-    if (!fulfillOrder || fulfillSaving) return
+  const confirmFulfillment = () => {
+    if (!fulfillOrder) return
     const eigenItems = fulfillItems.filter(i => i.fulfillType === 'eigen')
     const streckeItems = fulfillItems.filter(i => i.fulfillType === 'strecke')
     const ekItems = fulfillItems.filter(i => i.fulfillType === 'ekliste')
@@ -218,6 +218,28 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
       return
     }
 
+    const lines: string[] = []
+    if (eigenItems.length > 0) {
+      lines.push(`Eigenversand (${eigenItems.length}):`)
+      eigenItems.forEach(i => lines.push(`  • ${i.article_name} x${Math.round(Number(i.quantity) - Number(i.quantity_fulfilled || 0))}`))
+    }
+    if (streckeItems.length > 0) {
+      lines.push(`${lines.length > 0 ? '\n' : ''}Strecke (${streckeItems.length}):`)
+      streckeItems.forEach(i => lines.push(`  • ${i.article_name} x${Math.round(Number(i.quantity) - Number(i.quantity_fulfilled || 0))} → ${i.supplierName || '?'}`))
+    }
+    if (ekItems.length > 0) {
+      lines.push(`${lines.length > 0 ? '\n' : ''}Einkaufsliste (${ekItems.length}):`)
+      ekItems.forEach(i => lines.push(`  • ${i.article_name} x${Math.round(Number(i.quantity) - Number(i.quantity_fulfilled || 0))}`))
+    }
+
+    Alert.alert('Auslieferung bestätigen', lines.join('\n'), [
+      { text: 'Abbrechen', style: 'cancel' },
+      { text: 'Ausliefern', onPress: () => doFulfillment(eigenItems, streckeItems, ekItems) },
+    ])
+  }
+
+  const doFulfillment = async (eigenItems: typeof fulfillItems, streckeItems: typeof fulfillItems, ekItems: typeof fulfillItems) => {
+    if (!fulfillOrder) return
     setFulfillSaving(true)
     try {
       // 1. Fulfillment for eigen + strecke
@@ -256,20 +278,7 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
       queryClient.invalidateQueries({ queryKey: ['shopping-list'] })
       setFulfillOrder(null)
 
-      const summary: string[] = []
-      if (eigenItems.length > 0) {
-        summary.push(`Eigenversand (${eigenItems.length}):`)
-        eigenItems.forEach(i => summary.push(`  • ${i.article_name} x${Math.round(Number(i.quantity) - Number(i.quantity_fulfilled || 0))}`))
-      }
-      if (streckeItems.filter(i => i.supplierId).length > 0) {
-        summary.push(`\nStrecke (${streckeItems.length}):`)
-        streckeItems.forEach(i => summary.push(`  • ${i.article_name} x${Math.round(Number(i.quantity) - Number(i.quantity_fulfilled || 0))} → ${i.supplierName || '?'}`))
-      }
-      if (ekItems.length > 0) {
-        summary.push(`\nEinkaufsliste (${ekItems.length}):`)
-        ekItems.forEach(i => summary.push(`  • ${i.article_name} x${Math.round(Number(i.quantity) - Number(i.quantity_fulfilled || 0))}`))
-      }
-      Alert.alert('Auslieferung abgeschlossen', summary.join('\n'))
+      Alert.alert('Erledigt', 'Auslieferung wurde verarbeitet.')
     } catch (e: any) {
       Alert.alert('Fehler', e?.message || 'Fehlgeschlagen')
     }
@@ -587,7 +596,7 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.fulfillSubmitBtn, fulfillSaving && { opacity: 0.6 }]}
-                onPress={submitFulfillment}
+                onPress={confirmFulfillment}
                 disabled={fulfillSaving}
               >
                 {fulfillSaving ? (
