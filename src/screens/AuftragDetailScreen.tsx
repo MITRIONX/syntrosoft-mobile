@@ -134,19 +134,19 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
         <>
           {po.length > 0 && (
             <FulfillmentSection title="Lieferantenbestellungen" icon={<Package size={13} color={colors.textMuted} />}>
-              {po.map((po: any, i: number) => (
-                <View key={po.id} style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}>
+              {po.map((p: any, i: number) => (
+                <View key={p.id || i} style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}>
                   <View style={fulfillStyles.rowMain}>
-                    <Text style={fulfillStyles.rowTitle}>{po.order_number}</Text>
-                    <Text style={fulfillStyles.rowSub} numberOfLines={1}>{po.supplier_name}</Text>
+                    <Text style={fulfillStyles.rowTitle}>{p.order_number}</Text>
+                    <Text style={fulfillStyles.rowSub} numberOfLines={1}>{p.supplier_name}</Text>
                   </View>
                   <View style={fulfillStyles.rowRight}>
-                    <View style={[fulfillStyles.minibadge, { backgroundColor: (STATUS_COLORS[po.status] || '#6b7280') + '25' }]}>
-                      <Text style={[fulfillStyles.minibadgeText, { color: STATUS_COLORS[po.status] || '#6b7280' }]}>
-                        {(po.status || '').replace(/_/g, ' ')}
+                    <View style={[fulfillStyles.minibadge, { backgroundColor: '#6b728025' }]}>
+                      <Text style={[fulfillStyles.minibadgeText, { color: '#6b7280' }]}>
+                        {String(p.status_text || p.status || '')}
                       </Text>
                     </View>
-                    <Text style={fulfillStyles.rowDate}>{formatDate(po.order_date)}</Text>
+                    <Text style={fulfillStyles.rowDate}>{formatDate(p.order_date)}</Text>
                   </View>
                 </View>
               ))}
@@ -157,7 +157,7 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
             <FulfillmentSection title="Versand" icon={<MapPin size={13} color={colors.textMuted} />}>
               {labels.map((label: any, i: number) => (
                 <TouchableOpacity
-                  key={label.id}
+                  key={label.id || i}
                   style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}
                   onPress={() => openTracking(label.carrier, label.tracking_number)}
                   activeOpacity={0.7}
@@ -168,9 +168,9 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
                       {label.tracking_number}
                     </Text>
                   </View>
-                  <View style={[fulfillStyles.minibage, { backgroundColor: (STATUS_COLORS[label.status] || '#6b7280') + '25' }]}>
-                    <Text style={[fulfillStyles.minibadgeText, { color: STATUS_COLORS[label.status] || '#6b7280' }]}>
-                      {(label.status || '').replace(/_/g, ' ')}
+                  <View style={[fulfillStyles.minibadge, { backgroundColor: '#3b82f625' }]}>
+                    <Text style={[fulfillStyles.minibadgeText, { color: '#3b82f6' }]}>
+                      {String(label.status || '')}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -181,17 +181,27 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
           {tracking.length > 0 && (
             <FulfillmentSection title="Tracking" icon={<Truck size={13} color={colors.textMuted} />}>
               {tracking.map((t: any, i: number) => {
-                const statusColor = DELIVERY_STATUS_COLORS[t.delivery_status] || DELIVERY_STATUS_COLORS.unknown
+                const statusLabel = t.status_label || (
+                  t.delivery_status === 'delivered' ? 'Zugestellt' :
+                  t.delivery_status === 'in_transit' ? 'Unterwegs' :
+                  t.delivery_status === 'pending' ? 'Ausstehend' :
+                  String(t.delivery_status || 'Unbekannt')
+                )
+                const statusColor =
+                  t.delivery_status === 'delivered' ? '#22c55e' :
+                  t.delivery_status === 'in_transit' ? '#3b82f6' :
+                  t.delivery_status === 'pending' ? '#f59e0b' :
+                  '#6b7280'
                 return (
-                  <View key={t.id} style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}>
+                  <View key={t.id || i} style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}>
                     <View style={fulfillStyles.rowMain}>
                       <Text style={fulfillStyles.rowTitle}>{t.trackingnummer}</Text>
-                      <Text style={fulfillStyles.rowSub}>{t.dienstleister}</Text>
+                      <Text style={fulfillStyles.rowSub}>{t.dienstleister} {t.lieferant ? `(${t.lieferant})` : ''}</Text>
                     </View>
                     <View style={fulfillStyles.rowRight}>
-                      <View style={[fulfillStyles.minibage, { backgroundColor: statusColor + '25' }]}>
+                      <View style={[fulfillStyles.minibadge, { backgroundColor: statusColor + '25' }]}>
                         <Text style={[fulfillStyles.minibadgeText, { color: statusColor }]}>
-                          {t.delivery_status === 'delivered' ? 'Zugestellt' : t.delivery_status === 'in_transit' ? 'Unterwegs' : t.delivery_status || 'Unbekannt'}
+                          {statusLabel}
                         </Text>
                       </View>
                       {t.delivered_at && (
@@ -207,12 +217,12 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
           {belege.length > 0 && (
             <FulfillmentSection title="Eingangsbelege / AB" icon={<FileCheck size={13} color={colors.textMuted} />}>
               {belege.map((beleg: any, i: number) => (
-                <View key={beleg.id} style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}>
+                <View key={beleg.id || i} style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}>
                   <View style={fulfillStyles.rowMain}>
-                    <Text style={fulfillStyles.rowTitle}>{beleg.beleg_nummer}</Text>
-                    <Text style={fulfillStyles.rowSub}>{formatDate(beleg.beleg_datum)}</Text>
+                    <Text style={fulfillStyles.rowTitle}>{String(beleg.beleg_nummer || beleg.commission_number || '-')}</Text>
+                    <Text style={fulfillStyles.rowSub}>{formatDate(beleg.beleg_datum || beleg.created_at)}</Text>
                   </View>
-                  <Text style={fulfillStyles.rowAmount}>{formatCurrency(beleg.netto_betrag || 0)}</Text>
+                  <Text style={fulfillStyles.rowAmount}>{formatCurrency(Number(beleg.netto_betrag) || 0)}</Text>
                 </View>
               ))}
             </FulfillmentSection>
