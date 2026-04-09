@@ -353,12 +353,12 @@ export function TicketDetailScreen({ ticket, onBack }: TicketDetailScreenProps) 
                   <Text style={styles.groupChipText}>{detail.group_name}</Text>
                 </View>
               )}
+              <TouchableOpacity style={styles.agentChip} onPress={() => setAgentModalVisible(true)} activeOpacity={0.7}>
+                <User size={11} color={colors.textMuted} />
+                <Text style={styles.agentChipText} numberOfLines={1}>{(detail as any).assigned_to || 'Nicht zugewiesen'}</Text>
+                <ChevronDown size={10} color={colors.textMuted} />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.contactRow} onPress={() => setAgentModalVisible(true)} activeOpacity={0.7}>
-              <User size={12} color={colors.textMuted} />
-              <Text style={styles.contactText}>{(detail as any).assigned_to || 'Nicht zugewiesen'}</Text>
-              <ChevronDown size={12} color={colors.textMuted} />
-            </TouchableOpacity>
             {contactName && (
               <View style={styles.contactRow}>
                 <User size={12} color={colors.textMuted} />
@@ -503,6 +503,21 @@ function createStyles() { return StyleSheet.create({
     fontSize: 11,
     color: colors.textSecondary,
     fontWeight: '500',
+  },
+  agentChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.surfaceHover,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  agentChipText: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontWeight: '500',
+    maxWidth: 100,
   },
   contactRow: {
     flexDirection: 'row',
