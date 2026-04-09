@@ -84,6 +84,9 @@ export function BestellungenScreen() {
               <Text style={styles.date}>{formatDate(item.order_date)}</Text>
             </View>
             <Text style={styles.supplier} numberOfLines={1}>{item.supplier_name || 'Unbekannt'}</Text>
+            {((item as any).delivery_company || item.warehouse_name) && (
+              <Text style={styles.destination} numberOfLines={1}>→ {isDropship ? (item as any).delivery_company : item.warehouse_name}{(item as any).delivery_city ? `, ${(item as any).delivery_city}` : ''}</Text>
+            )}
           </View>
         </View>
         <View style={styles.cardBottom}>
@@ -167,6 +170,7 @@ function createStyles() { return StyleSheet.create({
   orderNumber: { fontSize: 15, fontWeight: '600', color: colors.text },
   date: { fontSize: 11, color: colors.textMuted },
   supplier: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+  destination: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
   cardBottom: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 },
   detail: { fontSize: 12, color: colors.textMuted },
   amount: { fontWeight: '600', color: colors.text },

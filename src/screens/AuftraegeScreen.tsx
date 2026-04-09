@@ -53,16 +53,18 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-type StatusFilter = 'offen' | 'versendet' | 'zugestellt'
+type StatusFilter = 'offen' | 'bestellt' | 'versendet' | 'zugestellt'
 
 const FILTER_TABS: { key: StatusFilter; label: string }[] = [
   { key: 'offen', label: 'Offen' },
+  { key: 'bestellt', label: 'Bestellt' },
   { key: 'versendet', label: 'Versendet' },
   { key: 'zugestellt', label: 'Zugestellt' },
 ]
 
 const FILTER_MAP: Record<StatusFilter, string[]> = {
-  offen: ['offen', 'new', 'bestellt', 'in_bearbeitung'],
+  offen: ['offen', 'new', 'in_bearbeitung'],
+  bestellt: ['bestellt'],
   versendet: ['versendet'],
   zugestellt: ['zugestellt', 'abgeschlossen'],
 }

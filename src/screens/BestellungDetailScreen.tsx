@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { ArrowLeft, Package, CheckCircle, Clock, Truck } from 'lucide-react-native'
+import { ArrowLeft, Package, CheckCircle, Clock, Truck, MapPin } from 'lucide-react-native'
 import { useQuery } from '@tanstack/react-query'
 import { api, PurchaseOrder, PurchaseOrderItem } from '../lib/api'
 import { colors, spacing } from '../theme'
@@ -35,6 +35,13 @@ export function BestellungDetailScreen({ order, onBack }: Props) {
     queryFn: () => api.getPurchaseOrderItems(order.id),
   })
 
+  const { data: addressData } = useQuery({
+    queryKey: ['purchase-order-address', order.id],
+    queryFn: () => api.getPurchaseOrderAddress(order.id),
+  })
+
+  const address = addressData?.data
+
   const items = Array.isArray(data?.data) ? data.data : []
   const artikelItems = items.filter(i => !i.item_type || i.item_type === 'artikel')
 
@@ -62,6 +69,23 @@ export function BestellungDetailScreen({ order, onBack }: Props) {
           <Text style={styles.refText}>Auftrag: {order.reference_order_number}</Text>
         )}
       </View>
+
+      {/* Lieferadresse */}
+      {address && (
+        <View style={styles.addressCard}>
+          <View style={styles.addressHeader}>
+            <MapPin size={14} color={colors.textMuted} />
+            <Text style={styles.addressLabel}>{order.is_dropshipping ? 'Lieferadresse (Endkunde)' : 'Lageradresse'}</Text>
+          </View>
+          <Text style={styles.addressName}>
+            {address.shipping_company || [address.shipping_first_name, address.shipping_last_name].filter(Boolean).join(' ') || 'Unbekannt'}
+          </Text>
+          {address.shipping_street && <Text style={styles.addressLine}>{address.shipping_street}</Text>}
+          {(address.shipping_postal_code || address.shipping_city) && (
+            <Text style={styles.addressLine}>{[address.shipping_postal_code, address.shipping_city].filter(Boolean).join(' ')}</Text>
+          )}
+        </View>
+      )}
 
       {/* Beträge */}
       <View style={styles.amountGrid}>
@@ -170,6 +194,13 @@ function createStyles() { return StyleSheet.create({
   dateText: { fontSize: 12, color: colors.textMuted },
   supplierName: { fontSize: 16, fontWeight: '600', color: colors.text },
   refText: { fontSize: 12, color: colors.textMuted, marginTop: 4 },
+
+  // Adresse
+  addressCard: { backgroundColor: colors.surface, marginHorizontal: spacing.md, marginTop: spacing.sm, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.border },
+  addressHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  addressLabel: { fontSize: 11, color: colors.textMuted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  addressName: { fontSize: 14, fontWeight: '600', color: colors.text },
+  addressLine: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
 
   // Beträge
   amountGrid: { flexDirection: 'row', paddingHorizontal: spacing.md, paddingTop: spacing.md, gap: 8 },

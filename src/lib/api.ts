@@ -129,6 +129,10 @@ export const api = {
     return mobileFetch(`/versand/purchase-orders/${id}`)
   },
 
+  async getPurchaseOrderAddress(id: number): Promise<{ success: boolean; data: any }> {
+    return mobileFetch(`/versand/purchase-orders/${id}/shipping-address`)
+  },
+
   async getPurchaseOrderItems(id: number): Promise<{ success: boolean; data: PurchaseOrderItem[] }> {
     return mobileFetch(`/versand/purchase-orders/${id}/items`)
   },
