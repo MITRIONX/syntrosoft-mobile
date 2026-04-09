@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
-import { Search, ShoppingCart, Euro, Package } from 'lucide-react-native'
+import { Search, ShoppingCart } from 'lucide-react-native'
 import { api, Auftrag } from '../lib/api'
 import { colors, spacing } from '../theme'
 
@@ -107,14 +107,10 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
         </View>
 
         <View style={styles.cardRow}>
-          <View style={styles.cardDetail}>
-            <Package size={12} color={colors.textMuted} />
-            <Text style={styles.cardDetailText}>{item.items_count} Pos.</Text>
-          </View>
-          <View style={styles.cardDetail}>
-            <Euro size={12} color={colors.textMuted} />
-            <Text style={[styles.cardDetailText, styles.amount]}>{formatCurrency(item.total_gross)}</Text>
-          </View>
+          <Text style={styles.cardDetailText}>{item.items_count} Pos.</Text>
+          <Text style={styles.cardDetailText}>{(item as any).total_quantity || '?'} Stk.</Text>
+          <Text style={[styles.cardDetailText, styles.amount]}>{formatCurrency(item.total_gross)}</Text>
+          <StatusBadge status={(item as any).computed_status || item.status} />
         </View>
       </TouchableOpacity>
     )
