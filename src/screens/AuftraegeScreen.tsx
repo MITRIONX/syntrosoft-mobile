@@ -23,10 +23,12 @@ function formatDate(dateStr: string): string {
 }
 
 const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
-  new: { color: '#f59e0b', label: 'Neu' },
+  new: { color: '#3b82f6', label: 'Offen' },
   offen: { color: '#3b82f6', label: 'Offen' },
+  bestellt: { color: '#f59e0b', label: 'Bestellt' },
   in_bearbeitung: { color: '#f59e0b', label: 'In Bearbeitung' },
   versendet: { color: '#a855f7', label: 'Versendet' },
+  zugestellt: { color: '#22c55e', label: 'Zugestellt' },
   abgeschlossen: { color: '#22c55e', label: 'Abgeschlossen' },
   storniert: { color: '#ef4444', label: 'Storniert' },
 }
@@ -77,7 +79,7 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
             <Text style={styles.orderNumber}>#{item.order_number}</Text>
             <Text style={styles.customerName} numberOfLines={1}>{customerName}</Text>
           </View>
-          <StatusBadge status={item.status} />
+          <StatusBadge status={(item as any).computed_status || item.status} />
         </View>
 
         <View style={styles.cardRow}>
