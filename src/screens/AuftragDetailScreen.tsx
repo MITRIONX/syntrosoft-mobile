@@ -157,8 +157,9 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
         <Text style={fulfillStyles.emptyText}>Keine Fulfillment-Daten vorhanden</Text>
       ) : (
         <>
+          {/* 1. Bestellungen */}
           {po.length > 0 && (
-            <FulfillmentSection title="Lieferantenbestellungen" icon={<Package size={13} color={colors.textMuted} />}>
+            <FulfillmentSection title="Bestellungen" icon={<Package size={13} color={colors.textMuted} />}>
               {po.map((p: any, i: number) => (
                 <View key={p.id || i} style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}>
                   <View style={fulfillStyles.rowMain}>
@@ -178,6 +179,59 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
             </FulfillmentSection>
           )}
 
+          {/* 2. Auftragsbestaetigungen */}
+          {abLogs.length > 0 && (
+            <FulfillmentSection title="Auftragsbestaetigungen" icon={<FileCheck size={13} color={colors.textMuted} />}>
+              {abLogs.map((ab: any, i: number) => (
+                <TouchableOpacity
+                  key={ab.id || i}
+                  style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}
+                  onPress={() => ab.attachment_id > 0 && api.openAbAttachment(ab.attachment_id)}
+                  activeOpacity={ab.attachment_id > 0 ? 0.7 : 1}
+                >
+                  <View style={fulfillStyles.rowMain}>
+                    <Text style={[fulfillStyles.rowTitle, ab.attachment_id > 0 && fulfillStyles.trackingLink]}>
+                      {String(ab.attachment_filename || ab.matched_order_number || '-')}
+                    </Text>
+                    <Text style={fulfillStyles.rowSub}>{ab.supplier_name}</Text>
+                  </View>
+                  <View style={fulfillStyles.rowRight}>
+                    <View style={[fulfillStyles.minibadge, { backgroundColor: ab.status === 'verified' ? '#22c55e25' : '#3b82f625' }]}>
+                      <Text style={[fulfillStyles.minibadgeText, { color: ab.status === 'verified' ? '#22c55e' : '#3b82f6' }]}>
+                        {ab.status === 'verified' ? 'Verifiziert' : 'Erkannt'}
+                      </Text>
+                    </View>
+                    <Text style={fulfillStyles.rowDate}>{formatDate(ab.created_at)}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </FulfillmentSection>
+          )}
+
+          {/* 3. Eingangsbelege / Rechnungen */}
+          {belege.length > 0 && (
+            <FulfillmentSection title="Eingangsbelege" icon={<FileCheck size={13} color={colors.textMuted} />}>
+              {belege.map((beleg: any, i: number) => (
+                <TouchableOpacity
+                  key={beleg.id || i}
+                  style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}
+                  onPress={() => beleg.has_pdf && api.openEingangsbelegPdf(beleg.id)}
+                  activeOpacity={beleg.has_pdf ? 0.7 : 1}
+                >
+                  <View style={fulfillStyles.rowMain}>
+                    <Text style={[fulfillStyles.rowTitle, beleg.has_pdf && fulfillStyles.trackingLink]}>
+                      {String(beleg.beleg_nummer || beleg.commission_number || '-')}
+                      {beleg.has_pdf ? ' 📄' : ''}
+                    </Text>
+                    <Text style={fulfillStyles.rowSub}>{formatDate(beleg.beleg_datum || beleg.created_at)}</Text>
+                  </View>
+                  <Text style={fulfillStyles.rowAmount}>{formatCurrency(Number(beleg.netto_betrag) || 0)}</Text>
+                </TouchableOpacity>
+              ))}
+            </FulfillmentSection>
+          )}
+
+          {/* 4. Versand */}
           {labels.length > 0 && (
             <FulfillmentSection title="Versand" icon={<MapPin size={13} color={colors.textMuted} />}>
               {labels.map((label: any, i: number) => (
@@ -203,6 +257,7 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
             </FulfillmentSection>
           )}
 
+          {/* 5. Tracking */}
           {tracking.length > 0 && (
             <FulfillmentSection title="Tracking" icon={<Truck size={13} color={colors.textMuted} />}>
               {tracking.map((t: any, i: number) => {
@@ -240,56 +295,6 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
                   </TouchableOpacity>
                 )
               })}
-            </FulfillmentSection>
-          )}
-
-          {abLogs.length > 0 && (
-            <FulfillmentSection title="Auftragsbestaetigungen" icon={<FileCheck size={13} color={colors.textMuted} />}>
-              {abLogs.map((ab: any, i: number) => (
-                <TouchableOpacity
-                  key={ab.id || i}
-                  style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}
-                  onPress={() => ab.attachment_id > 0 && api.openAbAttachment(ab.attachment_id)}
-                  activeOpacity={ab.attachment_id > 0 ? 0.7 : 1}
-                >
-                  <View style={fulfillStyles.rowMain}>
-                    <Text style={[fulfillStyles.rowTitle, ab.attachment_id > 0 && fulfillStyles.trackingLink]}>
-                      {String(ab.attachment_filename || ab.matched_order_number || '-')}
-                    </Text>
-                    <Text style={fulfillStyles.rowSub}>{ab.supplier_name}</Text>
-                  </View>
-                  <View style={fulfillStyles.rowRight}>
-                    <View style={[fulfillStyles.minibadge, { backgroundColor: ab.status === 'verified' ? '#22c55e25' : '#3b82f625' }]}>
-                      <Text style={[fulfillStyles.minibadgeText, { color: ab.status === 'verified' ? '#22c55e' : '#3b82f6' }]}>
-                        {ab.status === 'verified' ? 'Verifiziert' : 'Erkannt'}
-                      </Text>
-                    </View>
-                    <Text style={fulfillStyles.rowDate}>{formatDate(ab.created_at)}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </FulfillmentSection>
-          )}
-
-          {belege.length > 0 && (
-            <FulfillmentSection title="Eingangsbelege" icon={<FileCheck size={13} color={colors.textMuted} />}>
-              {belege.map((beleg: any, i: number) => (
-                <TouchableOpacity
-                  key={beleg.id || i}
-                  style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}
-                  onPress={() => beleg.has_pdf && api.openEingangsbelegPdf(beleg.id)}
-                  activeOpacity={beleg.has_pdf ? 0.7 : 1}
-                >
-                  <View style={fulfillStyles.rowMain}>
-                    <Text style={[fulfillStyles.rowTitle, beleg.has_pdf && fulfillStyles.trackingLink]}>
-                      {String(beleg.beleg_nummer || beleg.commission_number || '-')}
-                      {beleg.has_pdf ? ' 📄' : ''}
-                    </Text>
-                    <Text style={fulfillStyles.rowSub}>{formatDate(beleg.beleg_datum || beleg.created_at)}</Text>
-                  </View>
-                  <Text style={fulfillStyles.rowAmount}>{formatCurrency(Number(beleg.netto_betrag) || 0)}</Text>
-                </TouchableOpacity>
-              ))}
             </FulfillmentSection>
           )}
         </>
