@@ -136,8 +136,12 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
   const labels = related?.shippingLabels || []
   const tracking = related?.trackingData || []
   const belege = related?.eingangsbelege || []
-  const abLogs = (related as any)?.abLogs || []
-  const hasAny = related && (po.length > 0 || labels.length > 0 || tracking.length > 0 || belege.length > 0 || abLogs.length > 0)
+  const allAbLogs = (related as any)?.abLogs || []
+  // Rechnungen aus AB-Logs herausfiltern und zu Eingangsrechnungen verschieben
+  const isRechnung = (ab: any) => /rechnung|invoice|VRE/i.test(ab.attachment_filename || '')
+  const abLogs = allAbLogs.filter((ab: any) => !isRechnung(ab))
+  const rechnungenFromAb = allAbLogs.filter(isRechnung)
+  const hasAny = related && (po.length > 0 || labels.length > 0 || tracking.length > 0 || belege.length > 0 || allAbLogs.length > 0)
 
   const openTracking = (carrier: string, trackingNumber: string, customUrl?: string) => {
     if (customUrl) {
@@ -165,7 +169,7 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
         <>
           {/* 1. Bestellungen */}
           {po.length > 0 && (
-            <FulfillmentSection title="Bestellungen" icon={<Package size={13} color={colors.textMuted} />}>
+            <FulfillmentSection title="Lieferantenbestellungen" icon={<Package size={13} color={colors.textMuted} />}>
               {po.map((p: any, i: number) => (
                 <View key={p.id || i} style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}>
                   <View style={fulfillStyles.rowMain}>
@@ -214,13 +218,34 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
             </FulfillmentSection>
           )}
 
-          {/* 3. Eingangsbelege / Rechnungen */}
-          {belege.length > 0 && (
-            <FulfillmentSection title="Eingangsbelege" icon={<FileCheck size={13} color={colors.textMuted} />}>
+          {/* 3. Eingangsrechnungen (echte Belege + Rechnungen aus AB-Logs) */}
+          {(belege.length > 0 || rechnungenFromAb.length > 0) && (
+            <FulfillmentSection title="Eingangsrechnungen" icon={<FileCheck size={13} color={colors.textMuted} />}>
+              {rechnungenFromAb.map((ab: any, i: number) => (
+                <TouchableOpacity
+                  key={'rab-' + (ab.id || i)}
+                  style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}
+                  onPress={() => ab.attachment_id > 0 && api.openAbAttachment(ab.attachment_id)}
+                  activeOpacity={ab.attachment_id > 0 ? 0.7 : 1}
+                >
+                  <View style={fulfillStyles.rowMain}>
+                    <Text style={[fulfillStyles.rowTitle, ab.attachment_id > 0 && fulfillStyles.trackingLink]}>
+                      {String(ab.attachment_filename || '-')}
+                    </Text>
+                    <Text style={fulfillStyles.rowSub}>{ab.supplier_name}</Text>
+                  </View>
+                  <View style={fulfillStyles.rowRight}>
+                    <View style={[fulfillStyles.minibadge, { backgroundColor: '#22c55e25' }]}>
+                      <Text style={[fulfillStyles.minibadgeText, { color: '#22c55e' }]}>Rechnung</Text>
+                    </View>
+                    <Text style={fulfillStyles.rowDate}>{formatDate(ab.created_at)}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
               {belege.map((beleg: any, i: number) => (
                 <TouchableOpacity
-                  key={beleg.id || i}
-                  style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}
+                  key={'bel-' + (beleg.id || i)}
+                  style={[fulfillStyles.row, (i > 0 || rechnungenFromAb.length > 0) && fulfillStyles.rowBorder]}
                   onPress={() => beleg.has_pdf && api.openEingangsbelegPdf(beleg.id)}
                   activeOpacity={beleg.has_pdf ? 0.7 : 1}
                 >
@@ -237,12 +262,12 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
             </FulfillmentSection>
           )}
 
-          {/* 4. Versand */}
-          {labels.length > 0 && (
-            <FulfillmentSection title="Versand" icon={<MapPin size={13} color={colors.textMuted} />}>
+          {/* 4. Versand & Tracking */}
+          {(labels.length > 0 || tracking.length > 0) && (
+            <FulfillmentSection title="Versand & Tracking" icon={<Truck size={13} color={colors.textMuted} />}>
               {labels.map((label: any, i: number) => (
                 <TouchableOpacity
-                  key={label.id || i}
+                  key={'label-' + (label.id || i)}
                   style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}
                   onPress={() => openTracking(label.carrier, label.tracking_number)}
                   activeOpacity={0.7}
@@ -260,12 +285,6 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
                   </View>
                 </TouchableOpacity>
               ))}
-            </FulfillmentSection>
-          )}
-
-          {/* 5. Tracking */}
-          {tracking.length > 0 && (
-            <FulfillmentSection title="Tracking" icon={<Truck size={13} color={colors.textMuted} />}>
               {tracking.map((t: any, i: number) => {
                 const statusLabel = t.status_label || (
                   t.delivery_status === 'delivered' ? 'Zugestellt' :
@@ -281,8 +300,8 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
                 const trackingUrl = t.carrier_tracking_url || t.raw_data?.Url || null
                 return (
                   <TouchableOpacity
-                    key={t.id || i}
-                    style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}
+                    key={'track-' + (t.id || i)}
+                    style={[fulfillStyles.row, (i > 0 || labels.length > 0) && fulfillStyles.rowBorder]}
                     onPress={() => openTracking(t.dienstleister, t.trackingnummer, trackingUrl)}
                     activeOpacity={0.7}
                   >
