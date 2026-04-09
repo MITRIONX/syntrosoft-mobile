@@ -113,24 +113,30 @@ export function EinkaufslisteScreen() {
       })).filter(s => s.data.length > 0 || !debouncedSearch)
     : [{ group: null as SupplierGroup | null, data: items }]
 
-  const renderItem = ({ item }: { item: ShoppingListItem }) => (
-    <View style={styles.card}>
-      <View style={styles.cardTop}>
-        <View style={{ flex: 1 }}>
-          {item.artikel_nummer && <Text style={styles.articleNumber}>{item.artikel_nummer}</Text>}
-          <Text style={styles.articleName} numberOfLines={2}>{item.artikel_name || 'Unbekannt'}</Text>
+  const renderItem = ({ item }: { item: ShoppingListItem }) => {
+    const days = item.created_at ? Math.floor((Date.now() - new Date(item.created_at).getTime()) / 86400000) : 0
+    const ageColor = days <= 3 ? '#22c55e' : days <= 7 ? '#f59e0b' : '#ef4444'
+    return (
+      <View style={styles.card}>
+        <View style={styles.cardTop}>
+          <View style={{ flex: 1 }}>
+            {item.artikel_nummer && <Text style={styles.articleNumber}>{item.artikel_nummer}</Text>}
+            <Text style={styles.articleName} numberOfLines={2}>{item.artikel_name || 'Unbekannt'}</Text>
+          </View>
+          <View style={styles.qtyBox}>
+            <Text style={styles.qty}>{Math.round(Number(item.menge) || 0)}</Text>
+            <Text style={styles.unit}>{item.einheit}</Text>
+          </View>
         </View>
-        <View style={styles.qtyBox}>
-          <Text style={styles.qty}>{item.menge}</Text>
-          <Text style={styles.unit}>{item.einheit}</Text>
+        <View style={styles.cardBottom}>
+          {item.order_number && <Text style={styles.reference}>{item.order_number}</Text>}
+          <View style={[styles.ageBadge, { backgroundColor: ageColor + '20' }]}>
+            <Text style={[styles.ageText, { color: ageColor }]}>{days === 0 ? 'Heute' : days === 1 ? '1 Tag' : `${days} Tage`}</Text>
+          </View>
         </View>
       </View>
-      <View style={styles.cardBottom}>
-        {item.order_number && <Text style={styles.reference}>{item.order_number}</Text>}
-        <Text style={styles.date}>{formatDate(item.created_at)}</Text>
-      </View>
-    </View>
-  )
+    )
+  }
 
   const isLoading = listLoading
   const error = listError
@@ -218,8 +224,9 @@ function createStyles() { return StyleSheet.create({
   qty: { fontSize: 16, fontWeight: '700', color: colors.primary },
   unit: { fontSize: 9, color: colors.textMuted, fontWeight: '500' },
   cardBottom: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  reference: { fontSize: 11, color: colors.textMuted },
-  date: { fontSize: 11, color: colors.textMuted },
+  reference: { fontSize: 11, color: colors.textMuted, flex: 1 },
+  ageBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  ageText: { fontSize: 11, fontWeight: '600' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   errorText: { color: colors.danger, fontSize: 14, textAlign: 'center', paddingHorizontal: 40 },
   emptyText: { color: colors.textMuted, fontSize: 14 },
