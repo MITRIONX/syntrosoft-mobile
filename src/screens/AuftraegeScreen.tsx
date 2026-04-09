@@ -103,14 +103,13 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
               <Text style={styles.orderDate}>{formatDate(item.order_date)}</Text>
             </View>
             <Text style={styles.customerName} numberOfLines={1}>{customerName}</Text>
+            <View style={styles.cardRow}>
+              <Text style={styles.cardDetailText}>{item.items_count} Pos.</Text>
+              <Text style={styles.cardDetailText}>{(item as any).total_quantity || '?'} Stk.</Text>
+              <Text style={[styles.cardDetailText, styles.amount]}>{formatCurrency(item.total_gross)}</Text>
+              <StatusBadge status={(item as any).computed_status || item.status} />
+            </View>
           </View>
-        </View>
-
-        <View style={styles.cardRow}>
-          <Text style={styles.cardDetailText}>{item.items_count} Pos.</Text>
-          <Text style={styles.cardDetailText}>{(item as any).total_quantity || '?'} Stk.</Text>
-          <Text style={[styles.cardDetailText, styles.amount]}>{formatCurrency(item.total_gross)}</Text>
-          <StatusBadge status={(item as any).computed_status || item.status} />
         </View>
       </TouchableOpacity>
     )
@@ -286,8 +285,8 @@ function createStyles() { return StyleSheet.create({
   cardRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    paddingLeft: 44,
+    justifyContent: 'space-between',
+    marginTop: 6,
   },
   cardDetail: {
     flexDirection: 'row',
