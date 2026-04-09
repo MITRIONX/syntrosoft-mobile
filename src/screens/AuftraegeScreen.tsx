@@ -212,12 +212,18 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
       return
     }
 
+    const streckeOhneLieferant = streckeItems.filter(i => !i.supplierId)
+    if (streckeOhneLieferant.length > 0) {
+      Alert.alert('Kein Lieferant', `${streckeOhneLieferant.length} Strecken-Position(en) ohne Lieferant. Bitte zuerst im ERP zuweisen.`)
+      return
+    }
+
     setFulfillSaving(true)
     try {
       // 1. Fulfillment for eigen + strecke
       const fulfillments = [
         ...eigenItems.map(i => ({ orderItemId: i.id, fulfillmentType: 'eigenversand', quantity: Math.round(Number(i.quantity) - Number(i.quantity_fulfilled || 0)) })),
-        ...streckeItems.map(i => ({ orderItemId: i.id, fulfillmentType: 'dropshipping', quantity: Math.round(Number(i.quantity) - Number(i.quantity_fulfilled || 0)), supplierId: i.supplierId || undefined })),
+        ...streckeItems.filter(i => i.supplierId).map(i => ({ orderItemId: i.id, fulfillmentType: 'dropshipping', quantity: Math.round(Number(i.quantity) - Number(i.quantity_fulfilled || 0)), supplierId: i.supplierId! })),
       ]
       if (fulfillments.length > 0) {
         await api.completeOrderFulfillment(fulfillOrder.id, fulfillments)
@@ -251,10 +257,19 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
       setFulfillOrder(null)
 
       const summary: string[] = []
-      if (eigenItems.length > 0) summary.push(`${eigenItems.length} Eigenversand`)
-      if (streckeItems.length > 0) summary.push(`${streckeItems.length} Strecke`)
-      if (ekItems.length > 0) summary.push(`${ekItems.length} EK-Liste`)
-      Alert.alert('Auslieferung', summary.join(', '))
+      if (eigenItems.length > 0) {
+        summary.push(`Eigenversand (${eigenItems.length}):`)
+        eigenItems.forEach(i => summary.push(`  • ${i.article_name} x${Math.round(Number(i.quantity) - Number(i.quantity_fulfilled || 0))}`))
+      }
+      if (streckeItems.filter(i => i.supplierId).length > 0) {
+        summary.push(`\nStrecke (${streckeItems.length}):`)
+        streckeItems.forEach(i => summary.push(`  • ${i.article_name} x${Math.round(Number(i.quantity) - Number(i.quantity_fulfilled || 0))} → ${i.supplierName || '?'}`))
+      }
+      if (ekItems.length > 0) {
+        summary.push(`\nEinkaufsliste (${ekItems.length}):`)
+        ekItems.forEach(i => summary.push(`  • ${i.article_name} x${Math.round(Number(i.quantity) - Number(i.quantity_fulfilled || 0))}`))
+      }
+      Alert.alert('Auslieferung abgeschlossen', summary.join('\n'))
     } catch (e: any) {
       Alert.alert('Fehler', e?.message || 'Fehlgeschlagen')
     }
@@ -535,8 +550,30 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
                           </TouchableOpacity>
                         ))}
                       </View>
-                      {item.fulfillType === 'strecke' && item.supplierName && (
-                        <Text style={styles.fulfillSupplier}>Lieferant: {item.supplierName}</Text>
+                      {item.fulfillType === 'strecke' && (
+                        <View style={styles.fulfillSupplierRow}>
+                          {(item.suppliers || []).length > 1 ? (
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.fulfillSupplierScroll}>
+                              {(item.suppliers || []).map((s: any) => (
+                                <TouchableOpacity
+                                  key={s.id}
+                                  style={[styles.fulfillSupplierChip, item.supplierId === s.id && styles.fulfillSupplierChipActive]}
+                                  onPress={() => {
+                                    const updated = [...fulfillItems]
+                                    updated[idx] = { ...updated[idx], supplierId: s.id, supplierName: s.name }
+                                    setFulfillItems(updated)
+                                  }}
+                                >
+                                  <Text style={[styles.fulfillSupplierChipText, item.supplierId === s.id && { color: '#fff' }]} numberOfLines={1}>{s.name}</Text>
+                                </TouchableOpacity>
+                              ))}
+                            </ScrollView>
+                          ) : item.supplierName ? (
+                            <Text style={styles.fulfillSupplier}>Lieferant: {item.supplierName}</Text>
+                          ) : (
+                            <Text style={[styles.fulfillSupplier, { color: colors.danger }]}>Kein Lieferant hinterlegt</Text>
+                          )}
+                        </View>
                       )}
                     </View>
                   )
@@ -977,6 +1014,11 @@ function createStyles() { return StyleSheet.create({
     fontWeight: '600',
     color: colors.textSecondary,
   },
+  fulfillSupplierRow: { marginTop: 6 },
+  fulfillSupplierScroll: { flexDirection: 'row' },
+  fulfillSupplierChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: colors.surfaceHover, marginRight: 6, borderWidth: 1, borderColor: colors.border },
+  fulfillSupplierChipActive: { backgroundColor: '#a855f7', borderColor: '#a855f7' },
+  fulfillSupplierChipText: { fontSize: 12, color: colors.text, fontWeight: '500' },
   fulfillSupplier: {
     fontSize: 11,
     color: '#a855f7',

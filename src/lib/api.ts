@@ -509,6 +509,13 @@ export interface PurchaseOrderItem {
   item_type: string
 }
 
+export interface OrderItemSupplier {
+  id: number
+  name: string
+  is_default: boolean
+  ek_netto: number | null
+}
+
 export interface OrderItem {
   id: number
   article_number: string | null
@@ -522,6 +529,7 @@ export interface OrderItem {
   stock_total: number | null
   default_supplier_id: number | null
   default_supplier_name: string | null
+  suppliers: OrderItemSupplier[]
 }
 
 export interface TrackingEntry {
