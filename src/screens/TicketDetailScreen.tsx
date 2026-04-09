@@ -55,7 +55,7 @@ function MessageContent({ msg, isAgent }: { msg: TicketMessage; isAgent: boolean
   if (msg.body_html) {
     const darkModeWrapper = `
       <html><head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=yes">
         <style>
           * { color: ${colors.text} !important; background-color: transparent !important; }
           body { margin: 0; padding: 0; font-family: -apple-system, sans-serif; font-size: 14px; line-height: 1.5; overflow-x: hidden; }
@@ -80,8 +80,18 @@ function MessageContent({ msg, isAgent }: { msg: TicketMessage; isAgent: boolean
           }}
           injectedJavaScript={`
             setTimeout(() => {
-              window.ReactNativeWebView.postMessage(String(document.body.scrollHeight));
-            }, 300);
+              var cw = document.body.scrollWidth;
+              var vw = window.innerWidth;
+              if (cw > vw) {
+                var scale = vw / cw;
+                document.body.style.transform = 'scale(' + scale + ')';
+                document.body.style.transformOrigin = 'top left';
+                document.body.style.width = (100 / scale) + '%';
+              }
+              setTimeout(() => {
+                window.ReactNativeWebView.postMessage(String(document.body.scrollHeight));
+              }, 100);
+            }, 200);
             true;
           `}
           onShouldStartLoadWithRequest={(req) => {
@@ -165,14 +175,16 @@ function MessageBubble({ msg, attachments }: { msg: TicketMessage; attachments: 
     )
   }
 
+  const hasHtml = !!msg.body_html
+
   return (
     <View style={[styles.bubbleWrapper, isAgent ? styles.bubbleWrapperRight : styles.bubbleWrapperLeft]}>
-      {!isAgent && (
+      {!isAgent && !hasHtml && (
         <View style={styles.avatarCircle}>
           <User size={14} color={colors.textMuted} />
         </View>
       )}
-      <View style={[styles.bubble, isAgent ? styles.bubbleAgent : styles.bubbleCustomer]}>
+      <View style={[styles.bubble, isAgent ? styles.bubbleAgent : styles.bubbleCustomer, hasHtml && styles.bubbleFullWidth]}>
         <View style={styles.bubbleMeta}>
           <Text style={[styles.bubbleSender, isAgent ? styles.bubbleSenderAgent : styles.bubbleSenderCustomer]}>
             {msg.sender_name || (isAgent ? 'Agent' : 'Kunde')}
@@ -182,7 +194,7 @@ function MessageBubble({ msg, attachments }: { msg: TicketMessage; attachments: 
         <MessageContent msg={msg} isAgent={isAgent} />
         {msgAttachments.length > 0 && <AttachmentList attachments={msgAttachments} />}
       </View>
-      {isAgent && (
+      {isAgent && !hasHtml && (
         <View style={[styles.avatarCircle, styles.avatarCircleAgent]}>
           <Bot size={14} color={colors.primary} />
         </View>
@@ -394,6 +406,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 8,
+  },
+  bubbleFullWidth: {
+    maxWidth: '100%',
+    flex: 1,
   },
   bubbleCustomer: {
     backgroundColor: colors.surface,
