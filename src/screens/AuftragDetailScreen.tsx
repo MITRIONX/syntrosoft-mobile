@@ -18,7 +18,13 @@ function formatCurrency(amount: number): string {
 function formatDate(dateStr: string): string {
   if (!dateStr) return ''
   const d = new Date(dateStr)
-  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`
+  const day = String(d.getDate()).padStart(2, '0')
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const year = d.getFullYear()
+  const hours = String(d.getHours()).padStart(2, '0')
+  const mins = String(d.getMinutes()).padStart(2, '0')
+  if (hours === '00' && mins === '00') return `${day}.${month}.${year}`
+  return `${day}.${month}.${year} ${hours}:${mins}`
 }
 
 const STATUS_COLORS: Record<string, string> = {

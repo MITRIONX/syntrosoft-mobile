@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
-import { Search, ShoppingCart, Calendar, Euro, Package } from 'lucide-react-native'
+import { Search, ShoppingCart, Euro, Package } from 'lucide-react-native'
 import { api, Auftrag } from '../lib/api'
 import { colors, spacing } from '../theme'
 
@@ -19,7 +19,10 @@ function formatDate(dateStr: string): string {
   const day = String(d.getDate()).padStart(2, '0')
   const month = String(d.getMonth() + 1).padStart(2, '0')
   const year = d.getFullYear()
-  return `${day}.${month}.${year}`
+  const hours = String(d.getHours()).padStart(2, '0')
+  const mins = String(d.getMinutes()).padStart(2, '0')
+  if (hours === '00' && mins === '00') return `${day}.${month}.${year}`
+  return `${day}.${month}.${year} ${hours}:${mins}`
 }
 
 const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
@@ -76,17 +79,16 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
             <ShoppingCart size={18} color={colors.primary} />
           </View>
           <View style={styles.cardInfo}>
-            <Text style={styles.orderNumber}>#{item.order_number}</Text>
+            <View style={styles.orderNumberRow}>
+              <Text style={styles.orderNumber}>#{item.order_number}</Text>
+              <Text style={styles.orderDate}>{formatDate(item.order_date)}</Text>
+            </View>
             <Text style={styles.customerName} numberOfLines={1}>{customerName}</Text>
           </View>
           <StatusBadge status={(item as any).computed_status || item.status} />
         </View>
 
         <View style={styles.cardRow}>
-          <View style={styles.cardDetail}>
-            <Calendar size={12} color={colors.textMuted} />
-            <Text style={styles.cardDetailText}>{formatDate(item.order_date)}</Text>
-          </View>
           <View style={styles.cardDetail}>
             <Package size={12} color={colors.textMuted} />
             <Text style={styles.cardDetailText}>{item.items_count} Pos.</Text>
@@ -195,10 +197,19 @@ function createStyles() { return StyleSheet.create({
   cardInfo: {
     flex: 1,
   },
+  orderNumberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   orderNumber: {
     fontSize: 15,
     fontWeight: '600',
     color: colors.text,
+  },
+  orderDate: {
+    fontSize: 11,
+    color: colors.textMuted,
   },
   customerName: {
     fontSize: 12,
