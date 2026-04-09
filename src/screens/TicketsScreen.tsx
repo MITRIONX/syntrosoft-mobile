@@ -42,11 +42,16 @@ export function TicketsScreen({ onSelectTicket }: TicketsScreenProps) {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['tickets', debouncedSearch, activeTab],
-    queryFn: () => api.searchTickets(debouncedSearch, activeTab, 50),
+    queryFn: async () => {
+      const result = await api.searchTickets(debouncedSearch, activeTab, 50)
+      console.log('[TICKETS] Response:', JSON.stringify(result).substring(0, 500))
+      return result
+    },
     enabled: true,
   })
 
-  const tickets = data?.data || []
+  const tickets = data?.tickets || data?.data || []
+  console.log('[TICKETS] tickets count:', tickets.length, 'error:', error?.message, 'isLoading:', isLoading)
 
   const renderTicket = ({ item }: { item: Ticket }) => {
     const contactName = item.customer_display_name || item.supplier_display_name || item.customer_email || 'Unbekannt'
@@ -124,11 +129,13 @@ export function TicketsScreen({ onSelectTicket }: TicketsScreenProps) {
         </View>
       ) : error ? (
         <View style={styles.centered}>
-          <Text style={styles.errorText}>{(error as Error).message}</Text>
+          <Text style={styles.errorText}>Fehler: {(error as Error).message}</Text>
+          <Text style={[styles.errorText, { marginTop: 8, fontSize: 11 }]}>{JSON.stringify(data || 'no data').substring(0, 300)}</Text>
         </View>
       ) : tickets.length === 0 ? (
         <View style={styles.centered}>
           <Text style={styles.emptyText}>Keine Tickets gefunden</Text>
+          <Text style={[styles.emptyText, { marginTop: 8, fontSize: 11 }]}>Response: {JSON.stringify(data || 'no data').substring(0, 300)}</Text>
         </View>
       ) : (
         <FlatList

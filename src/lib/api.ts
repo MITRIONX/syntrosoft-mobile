@@ -71,7 +71,7 @@ export const api = {
     return mobileFetch(`/auftraege/${id}/related`)
   },
 
-  async searchTickets(search: string, status: 'open' | 'final' = 'open', limit = 30, page = 1): Promise<{ success: boolean; data: Ticket[]; total: number }> {
+  async searchTickets(search: string, status: 'open' | 'final' = 'open', limit = 30, page = 1): Promise<{ success: boolean; tickets: Ticket[]; data?: Ticket[]; pagination?: { total: number; page: number; pages: number } }> {
     return mobileFetch('/tickets', { search, is_final: status === 'final' ? 'final' : 'open', limit: String(limit), page: String(page) })
   },
 
