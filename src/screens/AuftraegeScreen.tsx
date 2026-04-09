@@ -46,10 +46,25 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
+type StatusFilter = 'offen' | 'versendet' | 'zugestellt'
+
+const FILTER_TABS: { key: StatusFilter; label: string }[] = [
+  { key: 'offen', label: 'Offen' },
+  { key: 'versendet', label: 'Versendet' },
+  { key: 'zugestellt', label: 'Zugestellt' },
+]
+
+const FILTER_MAP: Record<StatusFilter, string[]> = {
+  offen: ['offen', 'new', 'bestellt', 'in_bearbeitung'],
+  versendet: ['versendet'],
+  zugestellt: ['zugestellt', 'abgeschlossen'],
+}
+
 export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
   const styles = createStyles()
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [activeFilter, setActiveFilter] = useState<StatusFilter>('offen')
 
   const handleSearch = useCallback((text: string) => {
     setSearch(text)
@@ -59,11 +74,15 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['auftraege', debouncedSearch],
-    queryFn: () => api.searchAuftraege(debouncedSearch, 50),
+    queryFn: () => api.searchAuftraege(debouncedSearch, 100),
     enabled: true,
   })
 
-  const auftraege = data?.data || []
+  const allAuftraege = data?.data || []
+  const auftraege = allAuftraege.filter((a: any) => {
+    const status = (a.computed_status || a.status || 'offen').toLowerCase()
+    return FILTER_MAP[activeFilter].includes(status)
+  })
 
   const renderAuftrag = ({ item }: { item: Auftrag }) => {
     const customerName =
@@ -96,9 +115,6 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
             <Euro size={12} color={colors.textMuted} />
             <Text style={[styles.cardDetailText, styles.amount]}>{formatCurrency(item.total_gross)}</Text>
           </View>
-          <View style={{ flex: 1, alignItems: 'flex-end' }}>
-            <StatusBadge status={(item as any).computed_status || item.status} />
-          </View>
         </View>
       </TouchableOpacity>
     )
@@ -106,6 +122,20 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
 
   return (
     <View style={styles.container}>
+      {/* Status Filter Tabs */}
+      <View style={styles.tabs}>
+        {FILTER_TABS.map(tab => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[styles.tab, activeFilter === tab.key && styles.tabActive]}
+            onPress={() => setActiveFilter(tab.key)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.tabText, activeFilter === tab.key && styles.tabTextActive]}>{tab.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <View style={styles.searchContainer}>
         <Search size={18} color={colors.textMuted} style={styles.searchIcon} />
         <TextInput
@@ -150,6 +180,34 @@ function createStyles() { return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  tabs: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  tabActive: {
+    backgroundColor: colors.primary,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  tabTextActive: {
+    color: '#fff',
+    fontWeight: '600',
   },
   searchContainer: {
     flexDirection: 'row',
