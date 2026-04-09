@@ -257,6 +257,33 @@ export const api = {
     if (!conn) return
     Linking.openURL(`${conn.serverUrl}/api/mobile/auftraege/attachment/${attachmentId}?token=${conn.deviceToken}`)
   },
+
+  async getOrderItemsForFulfillment(orderId: number): Promise<{ success: boolean; order: any; items: OrderItem[] }> {
+    return mobileFetch(`/versand/shipping/order/${orderId}/items`)
+  },
+
+  async closeOrderWithoutShipping(orderId: number): Promise<{ success: boolean }> {
+    const conn = await getConnectionInfo()
+    if (!conn) throw new Error('Nicht verbunden')
+    const res = await fetch(`${conn.serverUrl}/api/mobile/versand/shipping/order/${orderId}/close-without-shipping`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${conn.deviceToken}`, 'Content-Type': 'application/json' },
+    })
+    if (!res.ok) throw new Error(`Fehler: ${res.status}`)
+    return res.json()
+  },
+
+  async completeOrderFulfillment(orderId: number, fulfillments: { orderItemId: number; fulfillmentType: string; quantity: number; supplierId?: number }[]): Promise<{ success: boolean }> {
+    const conn = await getConnectionInfo()
+    if (!conn) throw new Error('Nicht verbunden')
+    const res = await fetch(`${conn.serverUrl}/api/mobile/versand/shipping/order/${orderId}/complete`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${conn.deviceToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fulfillments }),
+    })
+    if (!res.ok) throw new Error(`Fehler: ${res.status}`)
+    return res.json()
+  },
 }
 
 export interface Quote {
@@ -480,6 +507,21 @@ export interface PurchaseOrderItem {
   total_net: number
   tax_rate: number
   item_type: string
+}
+
+export interface OrderItem {
+  id: number
+  article_number: string | null
+  article_name: string | null
+  quantity: number
+  quantity_fulfilled: number | null
+  unit: string
+  unit_price_net: number
+  total_net: number
+  item_type: string
+  stock_total: number | null
+  default_supplier_id: number | null
+  default_supplier_name: string | null
 }
 
 export interface TrackingEntry {

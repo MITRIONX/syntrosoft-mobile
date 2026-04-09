@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react'
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
-import { useQuery } from '@tanstack/react-query'
-import { Search, ShoppingCart } from 'lucide-react-native'
-import { api, Auftrag } from '../lib/api'
+import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, ScrollView, Alert } from 'react-native'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Search, ShoppingCart, X, CheckCircle, Minus, Plus, PackageCheck } from 'lucide-react-native'
+import { api, Auftrag, OrderItem } from '../lib/api'
+import { getConnectionInfo } from '../lib/auth'
 import { colors, spacing } from '../theme'
 
 interface AuftraegeScreenProps {
@@ -75,6 +76,13 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [activeFilter, setActiveFilter] = useState<StatusFilter>('offen')
 
+  const queryClient = useQueryClient()
+  const [contextOrder, setContextOrder] = useState<Auftrag | null>(null)
+  const [ekListeOrder, setEkListeOrder] = useState<Auftrag | null>(null)
+  const [ekItems, setEkItems] = useState<(OrderItem & { selected: boolean; orderQty: number })[]>([])
+  const [ekLoading, setEkLoading] = useState(false)
+  const [ekSaving, setEkSaving] = useState(false)
+
   const handleSearch = useCallback((text: string) => {
     setSearch(text)
     const timeout = setTimeout(() => setDebouncedSearch(text), 300)
@@ -93,6 +101,80 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
     return FILTER_MAP[activeFilter].includes(status)
   })
 
+  const openEkListe = async (order: Auftrag) => {
+    setContextOrder(null)
+    setEkListeOrder(order)
+    setEkLoading(true)
+    try {
+      const res = await api.getOrderItemsForFulfillment(order.id)
+      const items = (res?.items || []).filter((i: OrderItem) => i.item_type === 'artikel' || !i.item_type)
+      setEkItems(items.map((i: OrderItem) => ({
+        ...i,
+        selected: true,
+        orderQty: Math.max(0, Math.round(Number(i.quantity) - Number(i.quantity_fulfilled || 0))),
+      })))
+    } catch { setEkItems([]) }
+    setEkLoading(false)
+  }
+
+  const submitEkListe = async () => {
+    if (!ekListeOrder || ekSaving) return
+    const selected = ekItems.filter(i => i.selected && i.orderQty > 0)
+    if (selected.length === 0) { Alert.alert('Keine Positionen', 'Bitte mindestens eine Position auswaehlen.'); return }
+    setEkSaving(true)
+    try {
+      const conn = await getConnectionInfo()
+      if (!conn) throw new Error('Nicht verbunden')
+      const batchRes = await fetch(`${conn.serverUrl}/api/mobile/versand/shopping-list/batch`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${conn.deviceToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: selected.map(i => ({
+            artikel_id: null,
+            artikel_nummer: i.article_number,
+            artikel_name: i.article_name,
+            menge: i.orderQty,
+            einheit: i.unit || 'Stk',
+            order_id: ekListeOrder.id,
+            order_number: ekListeOrder.order_number,
+            supplier_id: i.default_supplier_id,
+            supplier_name: i.default_supplier_name,
+          })),
+        }),
+      })
+      if (!batchRes.ok) throw new Error(`Fehler: ${batchRes.status}`)
+      queryClient.invalidateQueries({ queryKey: ['shopping-list'] })
+      setEkListeOrder(null)
+      Alert.alert('Einkaufsliste', `${selected.length} Position(en) hinzugefuegt.`)
+    } catch (e: any) {
+      Alert.alert('Fehler', e?.message || 'Fehlgeschlagen')
+    }
+    setEkSaving(false)
+  }
+
+  const handleCloseWithoutShipping = async (order: Auftrag) => {
+    setContextOrder(null)
+    Alert.alert(
+      'Ohne Versand abschliessen',
+      `Auftrag ${order.order_number} ohne Versand abschliessen?`,
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Abschliessen',
+          onPress: async () => {
+            try {
+              await api.closeOrderWithoutShipping(order.id)
+              queryClient.invalidateQueries({ queryKey: ['auftraege'] })
+              Alert.alert('Erledigt', 'Auftrag wurde abgeschlossen.')
+            } catch (e: any) {
+              Alert.alert('Fehler', e?.message || 'Fehlgeschlagen')
+            }
+          },
+        },
+      ]
+    )
+  }
+
   const renderAuftrag = ({ item }: { item: Auftrag }) => {
     const customerName =
       item.customer_display_name ||
@@ -101,7 +183,13 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
       'Unbekannt'
 
     return (
-      <TouchableOpacity style={styles.card} onPress={() => onSelectAuftrag(item)} activeOpacity={0.7}>
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => onSelectAuftrag(item)}
+        onLongPress={() => setContextOrder(item)}
+        delayLongPress={400}
+        activeOpacity={0.7}
+      >
         <View style={styles.cardHeader}>
           <View style={styles.iconBox}>
             <ShoppingCart size={18} color={colors.primary} />
@@ -144,7 +232,7 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
         <Search size={18} color={colors.textMuted} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Aufträge suchen..."
+          placeholder="Auftraege suchen..."
           placeholderTextColor={colors.textMuted}
           value={search}
           onChangeText={handleSearch}
@@ -164,7 +252,7 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
       ) : auftraege.length === 0 ? (
         <View style={styles.centered}>
           <Text style={styles.emptyText}>
-            {debouncedSearch ? 'Keine Aufträge gefunden' : 'Suchbegriff eingeben'}
+            {debouncedSearch ? 'Keine Auftraege gefunden' : 'Suchbegriff eingeben'}
           </Text>
         </View>
       ) : (
@@ -176,6 +264,132 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {/* Context Menu Modal */}
+      <Modal visible={!!contextOrder} transparent animationType="fade" onRequestClose={() => setContextOrder(null)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setContextOrder(null)}>
+          <View style={styles.contextMenu}>
+            <View style={styles.contextHeader}>
+              <Text style={styles.contextTitle} numberOfLines={1}>#{contextOrder?.order_number}</Text>
+              <TouchableOpacity onPress={() => setContextOrder(null)}>
+                <X size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={styles.contextItem} onPress={() => contextOrder && openEkListe(contextOrder)}>
+              <ShoppingCart size={20} color={colors.primary} />
+              <Text style={styles.contextItemText}>Auf Einkaufsliste</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.contextItem} onPress={() => {
+              setContextOrder(null)
+              Alert.alert('Strecke bestellen', 'Streckenbestellung wird vorbereitet...')
+            }}>
+              <PackageCheck size={20} color="#f59e0b" />
+              <Text style={styles.contextItemText}>Strecke bestellen</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.contextItem} onPress={() => contextOrder && handleCloseWithoutShipping(contextOrder)}>
+              <CheckCircle size={20} color="#22c55e" />
+              <Text style={styles.contextItemText}>Ohne Versand abschliessen</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Einkaufsliste Modal */}
+      <Modal visible={!!ekListeOrder} transparent animationType="slide" onRequestClose={() => setEkListeOrder(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.ekModal}>
+            <View style={styles.ekHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.ekTitle}>Auf Einkaufsliste</Text>
+                <Text style={styles.ekSubtitle}>#{ekListeOrder?.order_number}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setEkListeOrder(null)}>
+                <X size={22} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            {ekLoading ? (
+              <View style={styles.ekCentered}>
+                <ActivityIndicator size="large" color={colors.primary} />
+              </View>
+            ) : ekItems.length === 0 ? (
+              <View style={styles.ekCentered}>
+                <Text style={styles.emptyText}>Keine Artikel-Positionen gefunden</Text>
+              </View>
+            ) : (
+              <ScrollView style={styles.ekList} contentContainerStyle={{ paddingBottom: 16 }}>
+                {ekItems.map((item, idx) => (
+                  <View key={item.id} style={styles.ekItem}>
+                    <TouchableOpacity
+                      style={styles.ekCheckbox}
+                      onPress={() => {
+                        const updated = [...ekItems]
+                        updated[idx] = { ...updated[idx], selected: !updated[idx].selected }
+                        setEkItems(updated)
+                      }}
+                    >
+                      <View style={[styles.checkboxBox, item.selected && styles.checkboxChecked]}>
+                        {item.selected && <CheckCircle size={16} color="#fff" />}
+                      </View>
+                    </TouchableOpacity>
+                    <View style={styles.ekItemInfo}>
+                      <Text style={styles.ekItemName} numberOfLines={2}>{item.article_name || item.article_number || 'Unbekannt'}</Text>
+                      {item.article_number && <Text style={styles.ekItemArtNr}>{item.article_number}</Text>}
+                      {item.default_supplier_name && <Text style={styles.ekItemSupplier}>{item.default_supplier_name}</Text>}
+                      <Text style={styles.ekItemMeta}>
+                        Bedarf: {item.quantity} {item.unit} | Bereits: {item.quantity_fulfilled || 0} {item.unit}
+                      </Text>
+                    </View>
+                    <View style={styles.ekQtyControl}>
+                      <TouchableOpacity
+                        style={styles.qtyBtn}
+                        onPress={() => {
+                          const updated = [...ekItems]
+                          updated[idx] = { ...updated[idx], orderQty: Math.max(0, updated[idx].orderQty - 1) }
+                          setEkItems(updated)
+                        }}
+                      >
+                        <Minus size={14} color={colors.text} />
+                      </TouchableOpacity>
+                      <Text style={styles.qtyText}>{item.orderQty}</Text>
+                      <TouchableOpacity
+                        style={styles.qtyBtn}
+                        onPress={() => {
+                          const updated = [...ekItems]
+                          updated[idx] = { ...updated[idx], orderQty: updated[idx].orderQty + 1 }
+                          setEkItems(updated)
+                        }}
+                      >
+                        <Plus size={14} color={colors.text} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+
+            <View style={styles.ekFooter}>
+              <TouchableOpacity style={styles.ekCancelBtn} onPress={() => setEkListeOrder(null)}>
+                <Text style={styles.ekCancelText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.ekSubmitBtn, ekSaving && { opacity: 0.6 }]}
+                onPress={submitEkListe}
+                disabled={ekSaving}
+              >
+                {ekSaving ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.ekSubmitText}>Hinzufuegen ({ekItems.filter(i => i.selected && i.orderQty > 0).length})</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -324,5 +538,189 @@ function createStyles() { return StyleSheet.create({
   emptyText: {
     color: colors.textMuted,
     fontSize: 14,
+  },
+  // Context Menu Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  contextMenu: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    width: '80%',
+    maxWidth: 320,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  contextHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  contextTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    flex: 1,
+    marginRight: 8,
+  },
+  contextItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  contextItemText: {
+    fontSize: 15,
+    color: colors.text,
+    marginLeft: 14,
+    fontWeight: '500',
+  },
+  // Einkaufsliste Modal
+  ekModal: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    width: '92%',
+    maxWidth: 420,
+    maxHeight: '85%',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  ekHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  ekTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  ekSubtitle: {
+    fontSize: 13,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  ekCentered: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ekList: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+  },
+  ekItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  ekCheckbox: {
+    marginRight: 10,
+  },
+  checkboxBox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  ekItemInfo: {
+    flex: 1,
+    marginRight: 8,
+  },
+  ekItemName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  ekItemArtNr: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 1,
+  },
+  ekItemSupplier: {
+    fontSize: 11,
+    color: colors.primary,
+    marginTop: 1,
+  },
+  ekItemMeta: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  ekQtyControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  qtyBtn: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  qtyText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    minWidth: 28,
+    textAlign: 'center',
+  },
+  ekFooter: {
+    flexDirection: 'row',
+    padding: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: 10,
+  },
+  ekCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  ekCancelText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  ekSubmitBtn: {
+    flex: 2,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ekSubmitText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
   },
 }) }
