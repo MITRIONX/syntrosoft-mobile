@@ -108,12 +108,25 @@ function FulfillmentSection({ title, icon, children }: { title: string; icon: Re
   )
 }
 
+/** Dynamischer Status basierend auf Fulfillment-Daten */
+function computeStatus(detail: AuftragDetail, related: AuftragRelated | undefined): { label: string; color: string } {
+  if (detail.is_cancelled) return { label: 'Storniert', color: '#ef4444' }
+  const tracking = related?.trackingData || []
+  const po = related?.purchaseOrders || []
+  const delivered = tracking.filter((t: any) => t.delivery_status === 'delivered')
+  if (delivered.length > 0 && delivered.length === tracking.length) return { label: 'Zugestellt', color: '#22c55e' }
+  if (tracking.length > 0) return { label: 'Versendet', color: '#a855f7' }
+  if (po.length > 0) return { label: 'Bestellt', color: '#f59e0b' }
+  return { label: 'Offen', color: '#3b82f6' }
+}
+
 function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
   const po = related?.purchaseOrders || []
   const labels = related?.shippingLabels || []
   const tracking = related?.trackingData || []
   const belege = related?.eingangsbelege || []
-  const hasAny = related && (po.length > 0 || labels.length > 0 || tracking.length > 0 || belege.length > 0)
+  const abLogs = (related as any)?.abLogs || []
+  const hasAny = related && (po.length > 0 || labels.length > 0 || tracking.length > 0 || belege.length > 0 || abLogs.length > 0)
 
   const openTracking = (carrier: string, trackingNumber: string, customUrl?: string) => {
     if (customUrl) {
@@ -217,9 +230,7 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
                           {statusLabel}
                         </Text>
                       </View>
-                      {t.delivered_at && (
-                        <Text style={fulfillStyles.rowDate}>{formatDate(t.delivered_at)}</Text>
-                      )}
+                      <Text style={fulfillStyles.rowDate}>{formatDate(t.delivered_at || t.created_at)}</Text>
                     </View>
                   </TouchableOpacity>
                 )
@@ -227,8 +238,36 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
             </FulfillmentSection>
           )}
 
+          {abLogs.length > 0 && (
+            <FulfillmentSection title="Auftragsbestaetigungen" icon={<FileCheck size={13} color={colors.textMuted} />}>
+              {abLogs.map((ab: any, i: number) => (
+                <TouchableOpacity
+                  key={ab.id || i}
+                  style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}
+                  onPress={() => ab.attachment_id > 0 && api.openAbAttachment(ab.attachment_id)}
+                  activeOpacity={ab.attachment_id > 0 ? 0.7 : 1}
+                >
+                  <View style={fulfillStyles.rowMain}>
+                    <Text style={[fulfillStyles.rowTitle, ab.attachment_id > 0 && fulfillStyles.trackingLink]}>
+                      {String(ab.attachment_filename || ab.matched_order_number || '-')}
+                    </Text>
+                    <Text style={fulfillStyles.rowSub}>{ab.supplier_name}</Text>
+                  </View>
+                  <View style={fulfillStyles.rowRight}>
+                    <View style={[fulfillStyles.minibadge, { backgroundColor: ab.status === 'verified' ? '#22c55e25' : '#3b82f625' }]}>
+                      <Text style={[fulfillStyles.minibadgeText, { color: ab.status === 'verified' ? '#22c55e' : '#3b82f6' }]}>
+                        {ab.status === 'verified' ? 'Verifiziert' : 'Erkannt'}
+                      </Text>
+                    </View>
+                    <Text style={fulfillStyles.rowDate}>{formatDate(ab.created_at)}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </FulfillmentSection>
+          )}
+
           {belege.length > 0 && (
-            <FulfillmentSection title="Eingangsbelege / AB" icon={<FileCheck size={13} color={colors.textMuted} />}>
+            <FulfillmentSection title="Eingangsbelege" icon={<FileCheck size={13} color={colors.textMuted} />}>
               {belege.map((beleg: any, i: number) => (
                 <TouchableOpacity
                   key={beleg.id || i}
@@ -310,18 +349,28 @@ export function AuftragDetailScreen({ auftrag, onBack }: AuftragDetailScreenProp
       ) : detail ? (
         <ScrollView contentContainerStyle={styles.content}>
 
-          {/* Status | Kd.-Nr. | Zahlungsart - 3er Grid */}
-          <View style={styles.infoGrid3}>
-            <View style={styles.infoGrid3Item}>
-              <StatusBadge status={detail.status} />
+          {/* Dynamischer Status */}
+          {(() => {
+            const s = computeStatus(detail, related)
+            return (
+              <View style={styles.statusRow}>
+                <View style={[styles.badge, { backgroundColor: s.color + '20', borderColor: s.color + '40' }]}>
+                  <Text style={[styles.badgeText, { color: s.color }]}>{s.label}</Text>
+                </View>
+                <Text style={styles.dateText}>{formatDate(detail.order_date)}</Text>
+              </View>
+            )
+          })()}
+
+          {/* Kd.-Nr. | Zahlungsart als Cards */}
+          <View style={styles.infoCards}>
+            <View style={styles.infoCard}>
+              <Text style={styles.infoCardLabel}>Kd.-Nr.</Text>
+              <Text style={styles.infoCardValue}>{detail.customer_number || '-'}</Text>
             </View>
-            <View style={styles.infoGrid3Item}>
-              <Text style={styles.infoGrid3Label}>Kd.-Nr.</Text>
-              <Text style={styles.infoGrid3Value}>{detail.customer_number || '-'}</Text>
-            </View>
-            <View style={styles.infoGrid3Item}>
-              <Text style={styles.infoGrid3Label}>Zahlungsart</Text>
-              <Text style={styles.infoGrid3Value} numberOfLines={1}>{detail.payment_method || '-'}</Text>
+            <View style={styles.infoCard}>
+              <Text style={styles.infoCardLabel}>Zahlungsart</Text>
+              <Text style={styles.infoCardValue} numberOfLines={1}>{detail.payment_method || '-'}</Text>
             </View>
           </View>
 
@@ -475,26 +524,40 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     paddingBottom: spacing.xl,
   },
-  infoGrid3: {
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  dateText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  infoCards: {
     flexDirection: 'row',
     gap: spacing.sm,
     marginBottom: spacing.sm,
   },
-  infoGrid3Item: {
+  infoCard: {
     flex: 1,
-    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  infoGrid3Label: {
+  infoCardLabel: {
     fontSize: 10,
     color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
-  infoGrid3Value: {
-    fontSize: 13,
+  infoCardValue: {
+    fontSize: 14,
     color: colors.text,
-    fontWeight: '500',
-    marginTop: 1,
+    fontWeight: '600',
+    marginTop: 2,
   },
   badge: {
     paddingHorizontal: 10,
