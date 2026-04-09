@@ -76,7 +76,8 @@ export const api = {
   },
 
   async getTicket(id: number): Promise<{ success: boolean; data: TicketDetail }> {
-    return mobileFetch(`/tickets/${id}`)
+    const res = await mobileFetch<{ success: boolean; ticket: Ticket; messages: TicketMessage[] }>(`/tickets/${id}`)
+    return { success: res.success, data: { ...res.ticket, ticket_messages: res.messages || [] } as TicketDetail }
   },
 
   /** Eingangsbeleg-PDF im Browser oeffnen */
