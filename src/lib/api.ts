@@ -113,6 +113,14 @@ export const api = {
     return mobileFetch('/versand/purchase-orders', query)
   },
 
+  async getPurchaseOrder(id: number): Promise<{ success: boolean; data: PurchaseOrder }> {
+    return mobileFetch(`/versand/purchase-orders/${id}`)
+  },
+
+  async getPurchaseOrderItems(id: number): Promise<{ success: boolean; data: PurchaseOrderItem[] }> {
+    return mobileFetch(`/versand/purchase-orders/${id}/items`)
+  },
+
   async searchTracking(params: { search?: string; status?: string; limit?: number; offset?: number } = {}): Promise<{ success: boolean; data: TrackingEntry[]; total?: number }> {
     const query: Record<string, string> = {}
     if (params.search) query.search = params.search
@@ -337,6 +345,19 @@ export interface PurchaseOrder {
   is_dropshipping: number
   warehouse_name: string | null
   created_at: string
+}
+
+export interface PurchaseOrderItem {
+  id: number
+  article_number: string | null
+  article_name: string | null
+  supplier_article_number: string | null
+  quantity: number
+  quantity_delivered: number | null
+  unit_price_net: number
+  total_net: number
+  tax_rate: number
+  item_type: string
 }
 
 export interface TrackingEntry {
