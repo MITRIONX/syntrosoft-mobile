@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
-import { Search, MessageSquare, MessageCircle, Clock } from 'lucide-react-native'
+import { Search, MessageSquare, MessageCircle } from 'lucide-react-native'
 import { api, Ticket } from '../lib/api'
 import { colors, spacing } from '../theme'
 
@@ -60,7 +60,10 @@ export function TicketsScreen({ onSelectTicket }: TicketsScreenProps) {
             <MessageSquare size={18} color={colors.primary} />
           </View>
           <View style={styles.cardInfo}>
-            <Text style={styles.ticketNumber}>{item.ticket_number?.startsWith('#') ? '' : '#'}{item.ticket_number}</Text>
+            <View style={styles.ticketNumberRow}>
+              <Text style={styles.ticketNumber}>{item.ticket_number?.startsWith('#') ? '' : '#'}{item.ticket_number}</Text>
+              <Text style={styles.ticketTime}>{timeAgo(item.updated_at || item.created_at)}</Text>
+            </View>
             <Text style={styles.subject} numberOfLines={1}>{item.subject}</Text>
           </View>
           {item.status_name && <StatusBadge name={item.status_name} color={item.status_color} />}
@@ -71,15 +74,9 @@ export function TicketsScreen({ onSelectTicket }: TicketsScreenProps) {
             <MessageCircle size={12} color={colors.textMuted} />
             <Text style={styles.cardDetailText} numberOfLines={1}>{contactName}</Text>
           </View>
-          <View style={styles.cardDetailRight}>
-            <View style={styles.cardDetail}>
-              <MessageSquare size={12} color={colors.textMuted} />
-              <Text style={styles.cardDetailText}>{item.message_count}</Text>
-            </View>
-            <View style={styles.cardDetail}>
-              <Clock size={12} color={colors.textMuted} />
-              <Text style={styles.cardDetailText}>{timeAgo(item.updated_at || item.created_at)}</Text>
-            </View>
+          <View style={styles.cardDetail}>
+            <MessageSquare size={12} color={colors.textMuted} />
+            <Text style={styles.cardDetailText}>{item.message_count}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -227,9 +224,18 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  ticketNumberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   ticketNumber: {
     fontSize: 12,
     fontWeight: '600',
+    color: colors.textMuted,
+  },
+  ticketTime: {
+    fontSize: 11,
     color: colors.textMuted,
   },
   subject: {
