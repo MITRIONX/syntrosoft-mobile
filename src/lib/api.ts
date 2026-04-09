@@ -137,6 +137,18 @@ export const api = {
     return mobileFetch(`/versand/purchase-orders/${id}/items`)
   },
 
+  async createGoodsReceipt(data: { purchase_order_id: number; items: { purchase_order_item_id: number; quantity: number }[]; delivery_note_number?: string; comment?: string }): Promise<{ success: boolean }> {
+    const conn = await getConnectionInfo()
+    if (!conn) throw new Error('Nicht verbunden')
+    const res = await fetch(`${conn.serverUrl}/api/mobile/versand/goods-receipts`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${conn.deviceToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) throw new Error(`Fehler: ${res.status}`)
+    return res.json()
+  },
+
   async searchQuotes(params: { search?: string; limit?: number; offset?: number } = {}): Promise<{ success: boolean; data: Quote[]; total?: number }> {
     const query: Record<string, string> = {}
     if (params.search) query.search = params.search
