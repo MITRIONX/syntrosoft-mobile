@@ -1,3 +1,4 @@
+import { Linking } from 'react-native'
 import { getConnectionInfo } from './auth'
 
 async function mobileFetch<T>(path: string, params?: Record<string, string>): Promise<T> {
@@ -68,6 +69,20 @@ export const api = {
 
   async getAuftragRelated(id: number): Promise<{ success: boolean; data: AuftragRelated }> {
     return mobileFetch(`/auftraege/${id}/related`)
+  },
+
+  /** Eingangsbeleg-PDF im Browser oeffnen */
+  async openEingangsbelegPdf(belegId: number): Promise<void> {
+    const conn = await getConnectionInfo()
+    if (!conn) return
+    Linking.openURL(`${conn.serverUrl}/api/mobile/auftraege/eingangsbeleg/${belegId}/pdf?token=${conn.deviceToken}`)
+  },
+
+  /** AB-Attachment im Browser oeffnen */
+  async openAbAttachment(attachmentId: number): Promise<void> {
+    const conn = await getConnectionInfo()
+    if (!conn) return
+    Linking.openURL(`${conn.serverUrl}/api/mobile/auftraege/attachment/${attachmentId}?token=${conn.deviceToken}`)
   },
 }
 

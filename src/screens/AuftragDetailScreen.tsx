@@ -85,6 +85,9 @@ function AddressCard({
 const TRACKING_URLS: Record<string, string> = {
   DHL: 'https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=',
   DPD: 'https://tracking.dpd.de/status/de_DE/parcel/',
+  UPS: 'https://www.ups.com/track?tracknum=',
+  GLS: 'https://gls-group.com/DE/de/paketverfolgung?match=',
+  HERMES: 'https://www.myhermes.de/empfangen/sendungsverfolgung/sendungsinformation?trackingId=',
 }
 
 const DELIVERY_STATUS_COLORS: Record<string, string> = {
@@ -112,7 +115,11 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
   const belege = related?.eingangsbelege || []
   const hasAny = related && (po.length > 0 || labels.length > 0 || tracking.length > 0 || belege.length > 0)
 
-  const openTracking = (carrier: string, trackingNumber: string) => {
+  const openTracking = (carrier: string, trackingNumber: string, customUrl?: string) => {
+    if (customUrl) {
+      Linking.openURL(customUrl)
+      return
+    }
     const base = TRACKING_URLS[carrier?.toUpperCase()] || null
     if (base) {
       Linking.openURL(base + encodeURIComponent(trackingNumber))
@@ -192,10 +199,16 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
                   t.delivery_status === 'in_transit' ? '#3b82f6' :
                   t.delivery_status === 'pending' ? '#f59e0b' :
                   '#6b7280'
+                const trackingUrl = t.carrier_tracking_url || t.raw_data?.Url || null
                 return (
-                  <View key={t.id || i} style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}>
+                  <TouchableOpacity
+                    key={t.id || i}
+                    style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}
+                    onPress={() => openTracking(t.dienstleister, t.trackingnummer, trackingUrl)}
+                    activeOpacity={0.7}
+                  >
                     <View style={fulfillStyles.rowMain}>
-                      <Text style={fulfillStyles.rowTitle}>{t.trackingnummer}</Text>
+                      <Text style={[fulfillStyles.rowTitle, fulfillStyles.trackingLink]}>{t.trackingnummer}</Text>
                       <Text style={fulfillStyles.rowSub}>{t.dienstleister} {t.lieferant ? `(${t.lieferant})` : ''}</Text>
                     </View>
                     <View style={fulfillStyles.rowRight}>
@@ -208,7 +221,7 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
                         <Text style={fulfillStyles.rowDate}>{formatDate(t.delivered_at)}</Text>
                       )}
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 )
               })}
             </FulfillmentSection>
@@ -217,13 +230,21 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
           {belege.length > 0 && (
             <FulfillmentSection title="Eingangsbelege / AB" icon={<FileCheck size={13} color={colors.textMuted} />}>
               {belege.map((beleg: any, i: number) => (
-                <View key={beleg.id || i} style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}>
+                <TouchableOpacity
+                  key={beleg.id || i}
+                  style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}
+                  onPress={() => beleg.has_pdf && api.openEingangsbelegPdf(beleg.id)}
+                  activeOpacity={beleg.has_pdf ? 0.7 : 1}
+                >
                   <View style={fulfillStyles.rowMain}>
-                    <Text style={fulfillStyles.rowTitle}>{String(beleg.beleg_nummer || beleg.commission_number || '-')}</Text>
+                    <Text style={[fulfillStyles.rowTitle, beleg.has_pdf && fulfillStyles.trackingLink]}>
+                      {String(beleg.beleg_nummer || beleg.commission_number || '-')}
+                      {beleg.has_pdf ? ' 📄' : ''}
+                    </Text>
                     <Text style={fulfillStyles.rowSub}>{formatDate(beleg.beleg_datum || beleg.created_at)}</Text>
                   </View>
                   <Text style={fulfillStyles.rowAmount}>{formatCurrency(Number(beleg.netto_betrag) || 0)}</Text>
-                </View>
+                </TouchableOpacity>
               ))}
             </FulfillmentSection>
           )}
