@@ -57,12 +57,15 @@ function MessageContent({ msg, isAgent }: { msg: TicketMessage; isAgent: boolean
       <html><head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
         <style>
-          * { color: ${colors.text} !important; background-color: transparent !important; }
-          body { margin: 0; padding: 0; font-family: -apple-system, sans-serif; font-size: 14px; line-height: 1.5; }
+          * { color: ${colors.text} !important; background-color: transparent !important; box-sizing: border-box !important; }
+          body { margin: 0; padding: 0; font-family: -apple-system, sans-serif; font-size: 14px; line-height: 1.5; width: 100% !important; }
           a { color: ${colors.primary} !important; }
           img { max-width: 100% !important; height: auto !important; }
-          table { max-width: 100% !important; }
-          td, th { color: ${colors.text} !important; }
+          table { width: 100% !important; max-width: 100% !important; min-width: 0 !important; table-layout: fixed !important; }
+          td, th { color: ${colors.text} !important; word-wrap: break-word !important; overflow-wrap: break-word !important; }
+          div, p, span { max-width: 100% !important; }
+          [width] { width: 100% !important; }
+          center { width: 100% !important; }
         </style>
       </head><body>${msg.body_html}</body></html>
     `
