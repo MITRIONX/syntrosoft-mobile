@@ -56,9 +56,7 @@ export function TicketsScreen({ onSelectTicket }: TicketsScreenProps) {
     return (
       <TouchableOpacity style={styles.card} onPress={() => onSelectTicket(item)} activeOpacity={0.7}>
         <View style={styles.cardHeader}>
-          <View style={styles.iconBox}>
-            <MessageSquare size={18} color={colors.primary} />
-          </View>
+          {item.status_name && <StatusBadge name={item.status_name} color={item.status_color} />}
           <View style={styles.cardInfo}>
             <View style={styles.ticketNumberRow}>
               <Text style={styles.ticketNumber}>{item.ticket_number?.startsWith('#') ? '' : '#'}{item.ticket_number}</Text>
@@ -66,7 +64,6 @@ export function TicketsScreen({ onSelectTicket }: TicketsScreenProps) {
             </View>
             <Text style={styles.subject} numberOfLines={1}>{item.subject}</Text>
           </View>
-          {item.status_name && <StatusBadge name={item.status_name} color={item.status_color} />}
         </View>
 
         <View style={styles.cardRow}>
@@ -249,7 +246,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 6,
     borderWidth: 1,
-    marginLeft: 8,
+    marginRight: 8,
   },
   badgeText: {
     fontSize: 11,
@@ -259,7 +256,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingLeft: 44,
+    marginTop: 4,
   },
   cardDetail: {
     flexDirection: 'row',
