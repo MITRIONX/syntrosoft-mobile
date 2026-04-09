@@ -6,7 +6,7 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native'
 import { createDrawerNavigator, DrawerContentScrollView, DrawerContentComponentProps } from '@react-navigation/drawer'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Users, Settings, Menu, ShoppingCart, MessageSquare, Phone, Truck } from 'lucide-react-native'
+import { Users, Settings, Menu, ShoppingCart, MessageSquare, Phone, Truck, ShoppingBag, ChevronDown, ChevronRight, ClipboardList, Package } from 'lucide-react-native'
 import * as SecureStore from 'expo-secure-store'
 import { getConnectionInfo, ConnectionInfo } from './src/lib/auth'
 import { checkForUpdate } from './src/lib/updater'
@@ -42,12 +42,23 @@ function getNavTheme(isDark: boolean) {
   }
 }
 
-const MENU_ITEMS = [
+type MenuItem = {
+  name: string; icon: any; label: string;
+  children?: { name: string; icon: any; label: string }[]
+}
+
+const MENU_ITEMS: MenuItem[] = [
   { name: 'Kunden', icon: Users, label: 'Kunden' },
   { name: 'Auftraege', icon: ShoppingCart, label: 'Aufträge' },
   { name: 'Tickets', icon: MessageSquare, label: 'Tickets' },
   { name: 'Telefon', icon: Phone, label: 'Telefon' },
-  { name: 'Versand', icon: Truck, label: 'Versand' },
+  { name: 'Versand', icon: Truck, label: 'Versand', children: [
+    { name: 'Sendungsverfolgung', icon: Truck, label: 'Sendungsverfolgung' },
+  ]},
+  { name: 'Einkauf', icon: ShoppingBag, label: 'Einkauf', children: [
+    { name: 'Einkaufsliste', icon: ClipboardList, label: 'Einkaufsliste' },
+    { name: 'Bestellungen', icon: Package, label: 'Bestellungen' },
+  ]},
   { name: 'Einstellungen', icon: Settings, label: 'Einstellungen' },
 ]
 
@@ -55,6 +66,54 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
   const styles = createStyles()
   const insets = useSafeAreaInsets()
   const currentRoute = props.state.routes[props.state.index].name
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+
+  const toggleExpand = (name: string) => {
+    setExpanded(prev => ({ ...prev, [name]: !prev[name] }))
+  }
+
+  const renderItem = (item: MenuItem, isChild = false) => {
+    if (item.children) {
+      const isOpen = expanded[item.name]
+      const hasActiveChild = item.children.some(c => c.name === currentRoute)
+      const Icon = item.icon
+      return (
+        <View key={item.name}>
+          <TouchableOpacity
+            style={[styles.drawerItem, hasActiveChild && styles.drawerItemActive]}
+            onPress={() => toggleExpand(item.name)}
+            activeOpacity={0.7}
+          >
+            <Icon size={20} color={hasActiveChild ? colors.primary : colors.textSecondary} />
+            <Text style={[styles.drawerItemText, hasActiveChild && styles.drawerItemTextActive, { flex: 1 }]}>
+              {item.label}
+            </Text>
+            {isOpen
+              ? <ChevronDown size={16} color={colors.textMuted} />
+              : <ChevronRight size={16} color={colors.textMuted} />
+            }
+          </TouchableOpacity>
+          {isOpen && item.children.map(child => renderItem(child, true))}
+        </View>
+      )
+    }
+
+    const isActive = currentRoute === item.name
+    const Icon = item.icon
+    return (
+      <TouchableOpacity
+        key={item.name}
+        style={[styles.drawerItem, isActive && styles.drawerItemActive, isChild && styles.drawerSubItem]}
+        onPress={() => props.navigation.navigate(item.name)}
+        activeOpacity={0.7}
+      >
+        <Icon size={isChild ? 16 : 20} color={isActive ? colors.primary : colors.textSecondary} />
+        <Text style={[styles.drawerItemText, isActive && styles.drawerItemTextActive, isChild && styles.drawerSubItemText]}>
+          {item.label}
+        </Text>
+      </TouchableOpacity>
+    )
+  }
 
   return (
     <DrawerContentScrollView
@@ -68,23 +127,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
       </View>
 
       <View style={styles.drawerMenu}>
-        {MENU_ITEMS.map((item) => {
-          const isActive = currentRoute === item.name
-          const Icon = item.icon
-          return (
-            <TouchableOpacity
-              key={item.name}
-              style={[styles.drawerItem, isActive && styles.drawerItemActive]}
-              onPress={() => props.navigation.navigate(item.name)}
-              activeOpacity={0.7}
-            >
-              <Icon size={20} color={isActive ? colors.primary : colors.textSecondary} />
-              <Text style={[styles.drawerItemText, isActive && styles.drawerItemTextActive]}>
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          )
-        })}
+        {MENU_ITEMS.map(item => renderItem(item))}
       </View>
     </DrawerContentScrollView>
   )
@@ -168,6 +211,30 @@ function VersandPage({ navigation }: any) {
     <View style={styles.screenContainer}>
       <ScreenHeader title="Sendungsverfolgung" navigation={navigation} />
       <SendungsverfolgungScreen />
+    </View>
+  )
+}
+
+function EinkaufslistePage({ navigation }: any) {
+  const styles = createStyles()
+  return (
+    <View style={styles.screenContainer}>
+      <ScreenHeader title="Einkaufsliste" navigation={navigation} />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: colors.textMuted, fontSize: 14 }}>Einkaufsliste — kommt bald</Text>
+      </View>
+    </View>
+  )
+}
+
+function BestellungenPage({ navigation }: any) {
+  const styles = createStyles()
+  return (
+    <View style={styles.screenContainer}>
+      <ScreenHeader title="Bestellungen" navigation={navigation} />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: colors.textMuted, fontSize: 14 }}>Bestellungen — kommt bald</Text>
+      </View>
     </View>
   )
 }
@@ -258,7 +325,9 @@ export default function App() {
               <Drawer.Screen name="Auftraege" component={AuftraegePage} />
               <Drawer.Screen name="Tickets" component={TicketsPage} />
               <Drawer.Screen name="Telefon" component={TelefonPage} />
-              <Drawer.Screen name="Versand" component={VersandPage} />
+              <Drawer.Screen name="Sendungsverfolgung" component={VersandPage} />
+              <Drawer.Screen name="Einkaufsliste" component={EinkaufslistePage} />
+              <Drawer.Screen name="Bestellungen" component={BestellungenPage} />
               <Drawer.Screen name="Einstellungen" component={SettingsPage} />
             </Drawer.Navigator>
           </NavigationContainer>
@@ -337,5 +406,12 @@ function createStyles() { return StyleSheet.create({
   drawerItemTextActive: {
     color: colors.primary,
     fontWeight: '600',
+  },
+  drawerSubItem: {
+    paddingLeft: 48,
+    paddingVertical: 8,
+  },
+  drawerSubItemText: {
+    fontSize: 13,
   },
 }) }
