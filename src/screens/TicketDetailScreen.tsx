@@ -41,6 +41,7 @@ function timeAgo(dateStr: string | null | undefined): string {
 }
 
 function ColorBadge({ name, color, onPress }: { name: string; color: string; onPress?: () => void }) {
+  const styles = createStyles()
   const bg = color && color.startsWith('#') ? color : '#6b7280'
   const content = (
     <View style={[styles.badge, { backgroundColor: bg + '25', borderColor: bg + '50' }]}>
@@ -57,6 +58,7 @@ function ColorBadge({ name, color, onPress }: { name: string; color: string; onP
 function PickerModal<T extends { id: number; name: string; color?: string }>({ visible, title, items, selectedId, onSelect, onClose, allowNone }: {
   visible: boolean; title: string; items: T[]; selectedId: number | null; onSelect: (id: number | null) => void; onClose: () => void; allowNone?: boolean
 }) {
+  const styles = createStyles()
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
@@ -91,6 +93,7 @@ function PickerModal<T extends { id: number; name: string; color?: string }>({ v
 }
 
 function MessageContent({ msg, isAgent }: { msg: TicketMessage; isAgent: boolean }) {
+  const styles = createStyles()
   const [webViewHeight, setWebViewHeight] = useState(100)
 
   if (msg.body_html) {
@@ -169,6 +172,7 @@ function formatFileSize(bytes: number | null): string {
 }
 
 function AttachmentList({ attachments }: { attachments: TicketAttachment[] }) {
+  const styles = createStyles()
   const nonInline = attachments.filter(a => !a.is_inline)
   if (nonInline.length === 0) return null
 
@@ -196,6 +200,7 @@ function AttachmentList({ attachments }: { attachments: TicketAttachment[] }) {
 }
 
 function MessageBubble({ msg, attachments }: { msg: TicketMessage; attachments: TicketAttachment[] }) {
+  const styles = createStyles()
   const isAgent = msg.sender_type === 'agent'
   const isSystem = msg.sender_type === 'system' || msg.is_internal_note
   const msgAttachments = attachments.filter(a => a.message_id === msg.id)
@@ -245,6 +250,7 @@ function MessageBubble({ msg, attachments }: { msg: TicketMessage; attachments: 
 }
 
 export function TicketDetailScreen({ ticket, onBack }: TicketDetailScreenProps) {
+  const styles = createStyles()
   const insets = useSafeAreaInsets()
   const listRef = useRef<FlatList>(null)
   const queryClient = useQueryClient()
@@ -427,7 +433,7 @@ export function TicketDetailScreen({ ticket, onBack }: TicketDetailScreenProps) 
   )
 }
 
-const styles = StyleSheet.create({
+function createStyles() { return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -757,4 +763,4 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
   },
-})
+}) }

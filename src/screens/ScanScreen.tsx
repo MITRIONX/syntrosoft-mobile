@@ -9,6 +9,7 @@ interface ScanScreenProps {
 }
 
 export function ScanScreen({ onPaired }: ScanScreenProps) {
+  const styles = createStyles()
   const [permission, requestPermission] = useCameraPermissions()
   const [pairing, setPairing] = useState(false)
   const scannedRef = useRef(false)
@@ -89,7 +90,7 @@ export function ScanScreen({ onPaired }: ScanScreenProps) {
   )
 }
 
-const styles = StyleSheet.create({
+function createStyles() { return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -158,4 +159,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
-})
+}) }

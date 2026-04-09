@@ -30,6 +30,7 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const styles = createStyles()
   const color = STATUS_COLORS[status] || '#6b7280'
   const label = status.replace(/_/g, ' ')
   return (
@@ -60,6 +61,7 @@ function AddressCard({
   expanded: boolean
   onToggle: () => void
 }) {
+  const styles = createStyles()
   const Icon = icon
   const shortAddress = [city].filter(Boolean).join(', ')
   const fullAddress = [street, [postalCode, city].filter(Boolean).join(' '), country].filter(Boolean)
@@ -97,6 +99,7 @@ const DELIVERY_STATUS_COLORS: Record<string, string> = {
 }
 
 function FulfillmentSection({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+  const fulfillStyles = createFulfillStyles()
   return (
     <View style={fulfillStyles.section}>
       <View style={fulfillStyles.sectionHeader}>
@@ -121,6 +124,8 @@ function computeStatus(detail: AuftragDetail, related: AuftragRelated | undefine
 }
 
 function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
+  const styles = createStyles()
+  const fulfillStyles = createFulfillStyles()
   const po = related?.purchaseOrders || []
   const labels = related?.shippingLabels || []
   const tracking = related?.trackingData || []
@@ -294,6 +299,7 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
 }
 
 export function AuftragDetailScreen({ auftrag, onBack }: AuftragDetailScreenProps) {
+  const styles = createStyles()
   const insets = useSafeAreaInsets()
   const [expandedAddress, setExpandedAddress] = useState<'billing' | 'shipping' | null>(null)
 
@@ -475,7 +481,7 @@ export function AuftragDetailScreen({ auftrag, onBack }: AuftragDetailScreenProp
   )
 }
 
-const styles = StyleSheet.create({
+function createStyles() { return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -695,9 +701,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginTop: 4,
   },
-})
+}) }
 
-const fulfillStyles = StyleSheet.create({
+function createFulfillStyles() { return StyleSheet.create({
   card: {
     flex: 0,
   },
@@ -777,4 +783,4 @@ const fulfillStyles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'capitalize',
   },
-})
+}) }

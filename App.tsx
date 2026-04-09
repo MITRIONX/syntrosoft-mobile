@@ -48,6 +48,7 @@ const MENU_ITEMS = [
 ]
 
 function CustomDrawerContent(props: DrawerContentComponentProps) {
+  const styles = createStyles()
   const insets = useSafeAreaInsets()
   const currentRoute = props.state.routes[props.state.index].name
 
@@ -86,6 +87,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
 }
 
 function ScreenHeader({ title, navigation }: { title: string; navigation: any }) {
+  const styles = createStyles()
   const insets = useSafeAreaInsets()
 
   return (
@@ -99,6 +101,7 @@ function ScreenHeader({ title, navigation }: { title: string; navigation: any })
 }
 
 function KundenPage({ navigation }: any) {
+  const styles = createStyles()
   const [selectedKunde, setSelectedKunde] = useState<Kunde | null>(null)
 
   if (selectedKunde) {
@@ -114,6 +117,7 @@ function KundenPage({ navigation }: any) {
 }
 
 function AuftraegePage({ navigation }: any) {
+  const styles = createStyles()
   const [selectedAuftrag, setSelectedAuftrag] = useState<Auftrag | null>(null)
 
   if (selectedAuftrag) {
@@ -129,6 +133,7 @@ function AuftraegePage({ navigation }: any) {
 }
 
 function TicketsPage({ navigation }: any) {
+  const styles = createStyles()
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
 
   if (selectedTicket) {
@@ -148,6 +153,7 @@ let _connection: ConnectionInfo | null = null
 let _onDisconnect: (() => void) | null = null
 
 function SettingsPage({ navigation }: any) {
+  const styles = createStyles()
   return (
     <View style={styles.screenContainer}>
       <ScreenHeader title="Einstellungen" navigation={navigation} />
@@ -236,7 +242,7 @@ export default function App() {
   )
 }
 
-const styles = StyleSheet.create({
+function createStyles() { return StyleSheet.create({
   screenContainer: {
     flex: 1,
     backgroundColor: colors.background,
@@ -306,4 +312,4 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '600',
   },
-})
+}) }

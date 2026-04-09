@@ -23,6 +23,7 @@ function timeAgo(dateStr: string | null | undefined): string {
 }
 
 function StatusBadge({ name, color }: { name: string; color: string }) {
+  const styles = createStyles()
   const bg = color && color.startsWith('#') ? color : '#6b7280'
   return (
     <View style={[styles.badge, { backgroundColor: bg + '25', borderColor: bg + '50' }]}>
@@ -32,6 +33,7 @@ function StatusBadge({ name, color }: { name: string; color: string }) {
 }
 
 export function TicketsScreen({ onSelectTicket }: TicketsScreenProps) {
+  const styles = createStyles()
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [activeTab, setActiveTab] = useState<'open' | 'final'>('open')
@@ -139,7 +141,7 @@ export function TicketsScreen({ onSelectTicket }: TicketsScreenProps) {
   )
 }
 
-const styles = StyleSheet.create({
+function createStyles() { return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -287,4 +289,4 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
   },
-})
+}) }

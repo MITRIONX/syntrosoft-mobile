@@ -31,6 +31,7 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const styles = createStyles()
   const color = STATUS_COLORS[status] || '#6b7280'
   const label = status.replace(/_/g, ' ')
   return (
@@ -41,6 +42,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
+  const styles = createStyles()
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
@@ -138,7 +140,7 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
   )
 }
 
-const styles = StyleSheet.create({
+function createStyles() { return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -245,4 +247,4 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
   },
-})
+}) }

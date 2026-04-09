@@ -10,6 +10,7 @@ interface KundenScreenProps {
 }
 
 export function KundenScreen({ onSelectKunde }: KundenScreenProps) {
+  const styles = createStyles()
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
@@ -105,7 +106,7 @@ export function KundenScreen({ onSelectKunde }: KundenScreenProps) {
   )
 }
 
-const styles = StyleSheet.create({
+function createStyles() { return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -194,4 +195,4 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
   },
-})
+}) }

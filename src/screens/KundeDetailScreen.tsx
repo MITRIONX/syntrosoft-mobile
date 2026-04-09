@@ -10,6 +10,7 @@ interface KundeDetailScreenProps {
 }
 
 export function KundeDetailScreen({ kunde, onBack }: KundeDetailScreenProps) {
+  const styles = createStyles()
   const insets = useSafeAreaInsets()
   const name = kunde.company_name || [kunde.first_name, kunde.last_name].filter(Boolean).join(' ') || 'Unbenannt'
   const fullAddress = [kunde.street, kunde.house_number].filter(Boolean).join(' ')
@@ -105,7 +106,7 @@ export function KundeDetailScreen({ kunde, onBack }: KundeDetailScreenProps) {
   )
 }
 
-const styles = StyleSheet.create({
+function createStyles() { return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -200,4 +201,4 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
   },
-})
+}) }
