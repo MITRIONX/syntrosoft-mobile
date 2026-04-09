@@ -97,6 +97,22 @@ export const api = {
     return { success: res.success, data: { ...res.ticket, ticket_messages: res.messages || [] } as TicketDetail }
   },
 
+  async searchShoppingList(params: { status?: string; search?: string } = {}): Promise<{ success: boolean; data: ShoppingListItem[]; stats?: { total: number; offen: number; bestellt: number; erledigt: number } }> {
+    const query: Record<string, string> = {}
+    if (params.status) query.status = params.status
+    if (params.search) query.search = params.search
+    return mobileFetch('/versand/shopping-list', query)
+  },
+
+  async searchPurchaseOrders(params: { search?: string; status?: string; limit?: number; offset?: number } = {}): Promise<{ success: boolean; data: PurchaseOrder[]; total?: number }> {
+    const query: Record<string, string> = {}
+    if (params.search) query.search = params.search
+    if (params.status) query.status = params.status
+    if (params.limit) query.limit = String(params.limit)
+    if (params.offset) query.offset = String(params.offset)
+    return mobileFetch('/versand/purchase-orders', query)
+  },
+
   async searchTracking(params: { search?: string; status?: string; limit?: number; offset?: number } = {}): Promise<{ success: boolean; data: TrackingEntry[]; total?: number }> {
     const query: Record<string, string> = {}
     if (params.search) query.search = params.search
@@ -291,6 +307,36 @@ export interface TicketAttachment {
 
 export interface TicketDetail extends Ticket {
   ticket_messages: TicketMessage[]
+}
+
+export interface ShoppingListItem {
+  id: number
+  artikel_nummer: string | null
+  artikel_name: string | null
+  menge: number
+  einheit: string
+  order_number: string | null
+  supplier_name: string | null
+  status: 'offen' | 'bestellt' | 'erledigt'
+  notizen: string | null
+  created_at: string
+}
+
+export interface PurchaseOrder {
+  id: number
+  order_number: string
+  supplier_name: string | null
+  order_date: string | null
+  status_text: string | null
+  total_net: number
+  total_gross: number
+  items_count: number
+  qty_total: number | null
+  qty_delivered: number | null
+  reference_order_number: string | null
+  is_dropshipping: number
+  warehouse_name: string | null
+  created_at: string
 }
 
 export interface TrackingEntry {

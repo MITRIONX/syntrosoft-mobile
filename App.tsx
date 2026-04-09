@@ -21,6 +21,8 @@ import { TicketDetailScreen } from './src/screens/TicketDetailScreen'
 import { SettingsScreen } from './src/screens/SettingsScreen'
 import { TelefonScreen } from './src/screens/TelefonScreen'
 import { SendungsverfolgungScreen } from './src/screens/SendungsverfolgungScreen'
+import { EinkaufslisteScreen } from './src/screens/EinkaufslisteScreen'
+import { BestellungenScreen } from './src/screens/BestellungenScreen'
 import { colors, darkColors, lightColors, setThemeColors, ThemeContext, ThemeMode } from './src/theme'
 
 const queryClient = new QueryClient()
@@ -220,9 +222,7 @@ function EinkaufslistePage({ navigation }: any) {
   return (
     <View style={styles.screenContainer}>
       <ScreenHeader title="Einkaufsliste" navigation={navigation} />
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: colors.textMuted, fontSize: 14 }}>Einkaufsliste — kommt bald</Text>
-      </View>
+      <EinkaufslisteScreen />
     </View>
   )
 }
@@ -232,9 +232,7 @@ function BestellungenPage({ navigation }: any) {
   return (
     <View style={styles.screenContainer}>
       <ScreenHeader title="Bestellungen" navigation={navigation} />
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: colors.textMuted, fontSize: 14 }}>Bestellungen — kommt bald</Text>
-      </View>
+      <BestellungenScreen />
     </View>
   )
 }
