@@ -71,13 +71,13 @@ export function RechnungDetailScreen({ invoice, onBack }: Props) {
   })
 
   const items = Array.isArray(data?.data) ? data.data : []
-  const invoiceStatusColor = STATUS_COLORS[invoice.status?.toLowerCase()] || '#6b7280'
-  const payColor = PAYMENT_STATUS_COLORS[invoice.payment_status?.toLowerCase() || 'open'] || '#3b82f6'
+  const invoiceStatusColor = STATUS_COLORS[(invoice.status || '').toLowerCase()] || '#6b7280'
+  const payColor = PAYMENT_STATUS_COLORS[(invoice.payment_status || 'open').toLowerCase()] || '#3b82f6'
   const outstanding = Number(invoice.outstanding_amount) || 0
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+      <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <ArrowLeft size={24} color={colors.text} />
         </TouchableOpacity>
