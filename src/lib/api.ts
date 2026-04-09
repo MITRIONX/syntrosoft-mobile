@@ -71,6 +71,14 @@ export const api = {
     return mobileFetch(`/auftraege/${id}/related`)
   },
 
+  async searchTickets(search: string, status: 'open' | 'final' = 'open', limit = 30, page = 1): Promise<{ success: boolean; data: Ticket[]; total: number }> {
+    return mobileFetch('/tickets', { search, is_final: status === 'final' ? 'final' : 'open', limit: String(limit), page: String(page) })
+  },
+
+  async getTicket(id: number): Promise<{ success: boolean; data: TicketDetail }> {
+    return mobileFetch(`/tickets/${id}`)
+  },
+
   /** Eingangsbeleg-PDF im Browser oeffnen */
   async openEingangsbelegPdf(belegId: number): Promise<void> {
     const conn = await getConnectionInfo()
@@ -135,6 +143,39 @@ export interface AuftragRelated {
   trackingData: any[]
   eingangsbelege: any[]
   shoppingListItems: any[]
+}
+
+export interface Ticket {
+  id: number
+  ticket_number: string
+  subject: string
+  status_name: string
+  status_color: string
+  priority_name: string | null
+  priority_color: string | null
+  group_name: string | null
+  customer_display_name: string | null
+  supplier_display_name: string | null
+  customer_email: string | null
+  message_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface TicketMessage {
+  id: number
+  sender_type: 'customer' | 'agent' | 'system'
+  sender_name: string | null
+  sender_email: string | null
+  body: string
+  body_html: string | null
+  is_internal_note: boolean
+  has_attachments: boolean
+  created_at: string
+}
+
+export interface TicketDetail extends Ticket {
+  ticket_messages: TicketMessage[]
 }
 
 export interface AuftragItem {

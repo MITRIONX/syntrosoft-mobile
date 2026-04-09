@@ -6,15 +6,17 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native'
 import { createDrawerNavigator, DrawerContentScrollView, DrawerContentComponentProps } from '@react-navigation/drawer'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Users, Settings, Menu, ShoppingCart } from 'lucide-react-native'
+import { Users, Settings, Menu, ShoppingCart, MessageSquare } from 'lucide-react-native'
 import { getConnectionInfo, ConnectionInfo } from './src/lib/auth'
 import { checkForUpdate } from './src/lib/updater'
-import { Kunde, Auftrag } from './src/lib/api'
+import { Kunde, Auftrag, Ticket } from './src/lib/api'
 import { ScanScreen } from './src/screens/ScanScreen'
 import { KundenScreen } from './src/screens/KundenScreen'
 import { KundeDetailScreen } from './src/screens/KundeDetailScreen'
 import { AuftraegeScreen } from './src/screens/AuftraegeScreen'
 import { AuftragDetailScreen } from './src/screens/AuftragDetailScreen'
+import { TicketsScreen } from './src/screens/TicketsScreen'
+import { TicketDetailScreen } from './src/screens/TicketDetailScreen'
 import { SettingsScreen } from './src/screens/SettingsScreen'
 import { colors } from './src/theme'
 
@@ -37,6 +39,7 @@ const DarkTheme = {
 const MENU_ITEMS = [
   { name: 'Kunden', icon: Users, label: 'Kunden' },
   { name: 'Auftraege', icon: ShoppingCart, label: 'Aufträge' },
+  { name: 'Tickets', icon: MessageSquare, label: 'Tickets' },
   { name: 'Einstellungen', icon: Settings, label: 'Einstellungen' },
 ]
 
@@ -121,6 +124,21 @@ function AuftraegePage({ navigation }: any) {
   )
 }
 
+function TicketsPage({ navigation }: any) {
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
+
+  if (selectedTicket) {
+    return <TicketDetailScreen ticket={selectedTicket} onBack={() => setSelectedTicket(null)} />
+  }
+
+  return (
+    <View style={styles.screenContainer}>
+      <ScreenHeader title="Tickets" navigation={navigation} />
+      <TicketsScreen onSelectTicket={setSelectedTicket} />
+    </View>
+  )
+}
+
 // Connection wird als globale Variable gehalten (von App gesetzt)
 let _connection: ConnectionInfo | null = null
 let _onDisconnect: (() => void) | null = null
@@ -182,6 +200,7 @@ export default function App() {
           >
             <Drawer.Screen name="Kunden" component={KundenPage} />
             <Drawer.Screen name="Auftraege" component={AuftraegePage} />
+            <Drawer.Screen name="Tickets" component={TicketsPage} />
             <Drawer.Screen name="Einstellungen" component={SettingsPage} />
           </Drawer.Navigator>
         </NavigationContainer>
