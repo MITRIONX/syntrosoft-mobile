@@ -89,6 +89,8 @@ export interface Auftrag {
 }
 
 export interface AuftragDetail extends Auftrag {
+  external_order_number: string | null
+  customer_group_name: string | null
   subtotal_net: number
   subtotal_gross: number
   shipping_cost: number

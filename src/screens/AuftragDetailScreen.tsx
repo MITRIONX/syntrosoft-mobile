@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { ArrowLeft, ShoppingCart, User, MapPin, Package, Euro, Truck } from 'lucide-react-native'
+import { ArrowLeft, User, MapPin, Package, Euro, Truck, CreditCard, Hash, FileText } from 'lucide-react-native'
 import { useQuery } from '@tanstack/react-query'
 import { api, Auftrag, AuftragDetail, AuftragItem } from '../lib/api'
 import { colors, spacing } from '../theme'
@@ -17,10 +18,7 @@ function formatCurrency(amount: number): string {
 function formatDate(dateStr: string): string {
   if (!dateStr) return ''
   const d = new Date(dateStr)
-  const day = String(d.getDate()).padStart(2, '0')
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const year = d.getFullYear()
-  return `${day}.${month}.${year}`
+  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -41,8 +39,52 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
+function AddressCard({
+  title,
+  icon,
+  name,
+  street,
+  postalCode,
+  city,
+  country,
+  expanded,
+  onToggle,
+}: {
+  title: string
+  icon: any
+  name: string
+  street?: string | null
+  postalCode?: string | null
+  city?: string | null
+  country?: string | null
+  expanded: boolean
+  onToggle: () => void
+}) {
+  const Icon = icon
+  const shortAddress = [city].filter(Boolean).join(', ')
+  const fullAddress = [street, [postalCode, city].filter(Boolean).join(' '), country].filter(Boolean)
+
+  return (
+    <TouchableOpacity style={[styles.card, expanded && styles.cardExpanded]} onPress={onToggle} activeOpacity={0.7}>
+      <View style={styles.cardHeader}>
+        <Icon size={16} color={colors.primary} />
+        <Text style={styles.cardTitle}>{title}</Text>
+      </View>
+      <Text style={styles.addressName} numberOfLines={expanded ? undefined : 1}>{name}</Text>
+      {expanded ? (
+        fullAddress.map((line, i) => (
+          <Text key={i} style={styles.addressLine}>{line}</Text>
+        ))
+      ) : (
+        shortAddress ? <Text style={styles.addressShort} numberOfLines={1}>{shortAddress}</Text> : null
+      )}
+    </TouchableOpacity>
+  )
+}
+
 export function AuftragDetailScreen({ auftrag, onBack }: AuftragDetailScreenProps) {
   const insets = useSafeAreaInsets()
+  const [expandedAddress, setExpandedAddress] = useState<'billing' | 'shipping' | null>(null)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['auftrag', auftrag.id],
@@ -61,16 +103,7 @@ export function AuftragDetailScreen({ auftrag, onBack }: AuftragDetailScreenProp
     [detail?.shipping_first_name, detail?.shipping_last_name].filter(Boolean).join(' ') ||
     null
 
-  const billingAddress = [detail?.billing_street, detail?.billing_postal_code, detail?.billing_city]
-    .filter(Boolean)
-    .join(', ')
-
-  const shippingAddress = [detail?.shipping_street, detail?.shipping_postal_code, detail?.shipping_city]
-    .filter(Boolean)
-    .join(', ')
-
-  // Check if shipping differs from billing
-  const hasShipping = shippingAddress && shippingAddress !== billingAddress
+  const hasShipping = detail?.shipping_street && detail.shipping_street !== detail.billing_street
 
   return (
     <View style={styles.container}>
@@ -98,21 +131,64 @@ export function AuftragDetailScreen({ auftrag, onBack }: AuftragDetailScreenProp
             <Text style={styles.dateText}>{formatDate(detail.order_date)}</Text>
           </View>
 
-          {/* Kunde */}
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <User size={18} color={colors.primary} />
-              <Text style={styles.cardTitle}>Kunde</Text>
+          {/* Externe Auftragsnummer */}
+          {detail.external_order_number && (
+            <View style={styles.externalRow}>
+              <FileText size={14} color={colors.textMuted} />
+              <Text style={styles.externalLabel}>Ext. Nr.:</Text>
+              <Text style={styles.externalValue}>{detail.external_order_number}</Text>
             </View>
-            <Text style={styles.primaryText}>{billingName}</Text>
-            {detail.billing_city && (
-              <View style={styles.infoRow}>
-                <MapPin size={13} color={colors.textMuted} />
-                <Text style={styles.infoText}>{billingAddress}</Text>
+          )}
+
+          {/* Kunde-Info Zeile */}
+          <View style={styles.kundeInfoRow}>
+            {detail.customer_number && (
+              <View style={styles.kundeInfoItem}>
+                <Text style={styles.kundeInfoLabel}>Kd.-Nr.</Text>
+                <Text style={styles.kundeInfoValue}>{detail.customer_number}</Text>
               </View>
             )}
-            {detail.customer_number && (
-              <Text style={styles.subText}>Kd.-Nr.: {detail.customer_number}</Text>
+            {detail.customer_group_name && (
+              <View style={styles.kundeInfoItem}>
+                <Text style={styles.kundeInfoLabel}>Kundengruppe</Text>
+                <Text style={styles.kundeInfoValue}>{detail.customer_group_name}</Text>
+              </View>
+            )}
+            {detail.payment_method && (
+              <View style={styles.kundeInfoItem}>
+                <Text style={styles.kundeInfoLabel}>Zahlungsart</Text>
+                <Text style={styles.kundeInfoValue}>{detail.payment_method}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Adressen - 2er Grid, klickbar */}
+          <View style={expandedAddress ? undefined : styles.addressGrid}>
+            {(!expandedAddress || expandedAddress === 'billing') && (
+              <AddressCard
+                title="Rechnung"
+                icon={User}
+                name={billingName}
+                street={detail.billing_street}
+                postalCode={detail.billing_postal_code}
+                city={detail.billing_city}
+                country={detail.billing_country}
+                expanded={expandedAddress === 'billing'}
+                onToggle={() => setExpandedAddress(expandedAddress === 'billing' ? null : 'billing')}
+              />
+            )}
+            {hasShipping && (!expandedAddress || expandedAddress === 'shipping') && (
+              <AddressCard
+                title="Lieferung"
+                icon={Truck}
+                name={shippingName || billingName}
+                street={detail.shipping_street}
+                postalCode={detail.shipping_postal_code}
+                city={detail.shipping_city}
+                country={detail.shipping_country}
+                expanded={expandedAddress === 'shipping'}
+                onToggle={() => setExpandedAddress(expandedAddress === 'shipping' ? null : 'shipping')}
+              />
             )}
           </View>
 
@@ -168,24 +244,6 @@ export function AuftragDetailScreen({ auftrag, onBack }: AuftragDetailScreenProp
               </View>
             ))}
           </View>
-
-          {/* Lieferadresse (nur wenn abweichend) */}
-          {hasShipping && (
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Truck size={18} color={colors.primary} />
-                <Text style={styles.cardTitle}>Lieferadresse</Text>
-              </View>
-              {shippingName && <Text style={styles.primaryText}>{shippingName}</Text>}
-              <View style={styles.infoRow}>
-                <MapPin size={13} color={colors.textMuted} />
-                <Text style={styles.infoText}>{shippingAddress}</Text>
-              </View>
-              {detail.shipping_country && (
-                <Text style={styles.subText}>{detail.shipping_country}</Text>
-              )}
-            </View>
-          )}
 
           {/* Notizen */}
           {detail.notes && (
@@ -244,7 +302,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   badge: {
     paddingHorizontal: 10,
@@ -261,6 +319,53 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
   },
+  externalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: spacing.sm,
+    paddingHorizontal: 4,
+  },
+  externalLabel: {
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  externalValue: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  kundeInfoRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  kundeInfoItem: {
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  kundeInfoLabel: {
+    fontSize: 10,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  kundeInfoValue: {
+    fontSize: 13,
+    color: colors.text,
+    fontWeight: '500',
+    marginTop: 1,
+  },
+  addressGrid: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
   card: {
     backgroundColor: colors.surface,
     borderRadius: 12,
@@ -268,6 +373,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
+    flex: 1,
+  },
+  cardExpanded: {
+    marginBottom: spacing.sm,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -282,27 +391,20 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  primaryText: {
-    fontSize: 16,
+  addressName: {
+    fontSize: 14,
     fontWeight: '600',
     color: colors.text,
-    marginBottom: 6,
+    marginBottom: 2,
   },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
+  addressShort: {
+    fontSize: 12,
+    color: colors.textSecondary,
   },
-  infoText: {
+  addressLine: {
     fontSize: 13,
     color: colors.textSecondary,
-    flex: 1,
-  },
-  subText: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginTop: 4,
+    lineHeight: 19,
   },
   grid: {
     flexDirection: 'row',
