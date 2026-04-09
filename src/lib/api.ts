@@ -104,6 +104,18 @@ export const api = {
     return mobileFetch('/versand/shopping-list', query)
   },
 
+  async getShoppingListPreview(): Promise<{ success: boolean; data: SupplierGroup[] }> {
+    const conn = await getConnectionInfo()
+    if (!conn) throw new Error('Nicht verbunden')
+    const res = await fetch(`${conn.serverUrl}/api/mobile/versand/shopping-list/preview`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${conn.deviceToken}`, 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+    if (!res.ok) throw new Error(`Fehler: ${res.status}`)
+    return res.json()
+  },
+
   async searchPurchaseOrders(params: { search?: string; status?: string; limit?: number; offset?: number } = {}): Promise<{ success: boolean; data: PurchaseOrder[]; total?: number }> {
     const query: Record<string, string> = {}
     if (params.search) query.search = params.search
@@ -317,6 +329,21 @@ export interface TicketDetail extends Ticket {
   ticket_messages: TicketMessage[]
 }
 
+export interface SupplierGroup {
+  supplier_id: number | null
+  supplier_name: string
+  items: any[]
+  total_ek_netto: number
+  total_quantity: number
+  item_count: number
+  mindestbestellwert: number | null
+  versandkostenfrei_ab: number | null
+  versandkosten: number | null
+  below_minimum: boolean
+  below_free_shipping: boolean
+  shipping_cost: number
+}
+
 export interface ShoppingListItem {
   id: number
   artikel_nummer: string | null
@@ -324,6 +351,7 @@ export interface ShoppingListItem {
   menge: number
   einheit: string
   order_number: string | null
+  supplier_id: number | null
   supplier_name: string | null
   status: 'offen' | 'bestellt' | 'erledigt'
   notizen: string | null
