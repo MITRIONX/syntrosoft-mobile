@@ -107,7 +107,7 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
           <View style={styles.cardInfo}>
             <View style={styles.orderNumberRow}>
               <Text style={styles.orderNumber}>#{item.order_number}</Text>
-              <Text style={styles.orderDate}>{formatDate(item.order_date)}</Text>
+              <Text style={styles.orderDate}>{formatDate((item as any).created_at || item.order_date)}</Text>
             </View>
             <Text style={styles.customerName} numberOfLines={1}>{customerName}</Text>
             <View style={styles.cardRow}>
