@@ -74,6 +74,7 @@ export const api = {
 export interface Auftrag {
   id: number
   order_number: string
+  external_order_number: string | null
   customer_number: string | null
   customer_display_name: string | null
   order_date: string

@@ -261,7 +261,12 @@ export function AuftragDetailScreen({ auftrag, onBack }: AuftragDetailScreenProp
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <ArrowLeft size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>#{auftrag.order_number}</Text>
+        <View style={styles.headerTitles}>
+          <Text style={styles.headerTitle} numberOfLines={1}>#{auftrag.order_number}</Text>
+          {auftrag.external_order_number && (
+            <Text style={styles.headerExtNr} numberOfLines={1}>{auftrag.external_order_number}</Text>
+          )}
+        </View>
       </View>
 
       {isLoading ? (
@@ -275,41 +280,19 @@ export function AuftragDetailScreen({ auftrag, onBack }: AuftragDetailScreenProp
       ) : detail ? (
         <ScrollView contentContainerStyle={styles.content}>
 
-          {/* Status + Datum */}
-          <View style={styles.statusRow}>
-            <StatusBadge status={detail.status} />
-            <Text style={styles.dateText}>{formatDate(detail.order_date)}</Text>
-          </View>
-
-          {/* Externe Auftragsnummer */}
-          {detail.external_order_number && (
-            <View style={styles.externalRow}>
-              <FileText size={14} color={colors.textMuted} />
-              <Text style={styles.externalLabel}>Ext. Nr.:</Text>
-              <Text style={styles.externalValue}>{detail.external_order_number}</Text>
+          {/* Status | Kd.-Nr. | Zahlungsart - 3er Grid */}
+          <View style={styles.infoGrid3}>
+            <View style={styles.infoGrid3Item}>
+              <StatusBadge status={detail.status} />
             </View>
-          )}
-
-          {/* Kunde-Info Zeile */}
-          <View style={styles.kundeInfoRow}>
-            {detail.customer_number && (
-              <View style={styles.kundeInfoItem}>
-                <Text style={styles.kundeInfoLabel}>Kd.-Nr.</Text>
-                <Text style={styles.kundeInfoValue}>{detail.customer_number}</Text>
-              </View>
-            )}
-            {detail.customer_group_name && (
-              <View style={styles.kundeInfoItem}>
-                <Text style={styles.kundeInfoLabel}>Kundengruppe</Text>
-                <Text style={styles.kundeInfoValue}>{detail.customer_group_name}</Text>
-              </View>
-            )}
-            {detail.payment_method && (
-              <View style={styles.kundeInfoItem}>
-                <Text style={styles.kundeInfoLabel}>Zahlungsart</Text>
-                <Text style={styles.kundeInfoValue}>{detail.payment_method}</Text>
-              </View>
-            )}
+            <View style={styles.infoGrid3Item}>
+              <Text style={styles.infoGrid3Label}>Kd.-Nr.</Text>
+              <Text style={styles.infoGrid3Value}>{detail.customer_number || '-'}</Text>
+            </View>
+            <View style={styles.infoGrid3Item}>
+              <Text style={styles.infoGrid3Label}>Zahlungsart</Text>
+              <Text style={styles.infoGrid3Value} numberOfLines={1}>{detail.payment_method || '-'}</Text>
+            </View>
           </View>
 
           {/* Adressen - 2er Grid, klickbar */}
@@ -347,6 +330,7 @@ export function AuftragDetailScreen({ auftrag, onBack }: AuftragDetailScreenProp
             <View style={styles.cardHeader}>
               <Euro size={18} color={colors.primary} />
               <Text style={styles.cardTitle}>Beträge</Text>
+              <Text style={styles.cardHeaderDate}>{formatDate(detail.order_date)}</Text>
             </View>
             <View style={styles.grid}>
               <View style={styles.gridItem}>
@@ -430,11 +414,21 @@ const styles = StyleSheet.create({
     padding: 8,
     marginRight: 8,
   },
-  headerTitle: {
+  headerTitles: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+  },
+  headerTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: colors.text,
+  },
+  headerExtNr: {
+    fontSize: 13,
+    color: colors.textMuted,
+    marginLeft: 8,
   },
   centered: {
     flex: 1,
@@ -451,11 +445,26 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     paddingBottom: spacing.xl,
   },
-  statusRow: {
+  infoGrid3: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: spacing.sm,
     marginBottom: spacing.sm,
+  },
+  infoGrid3Item: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  infoGrid3Label: {
+    fontSize: 10,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  infoGrid3Value: {
+    fontSize: 13,
+    color: colors.text,
+    fontWeight: '500',
+    marginTop: 1,
   },
   badge: {
     paddingHorizontal: 10,
@@ -468,51 +477,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'capitalize',
   },
-  dateText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  externalRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: spacing.sm,
-    paddingHorizontal: 4,
-  },
-  externalLabel: {
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-  externalValue: {
+  cardHeaderDate: {
     fontSize: 13,
     color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  kundeInfoRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  kundeInfoItem: {
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  kundeInfoLabel: {
-    fontSize: 10,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  kundeInfoValue: {
-    fontSize: 13,
-    color: colors.text,
-    fontWeight: '500',
-    marginTop: 1,
+    marginLeft: 'auto',
   },
   addressGrid: {
     flexDirection: 'row',
