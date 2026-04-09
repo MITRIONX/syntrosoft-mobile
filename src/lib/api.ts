@@ -80,6 +80,16 @@ export const api = {
     return { success: res.success, data: { ...res.ticket, ticket_messages: res.messages || [] } as TicketDetail }
   },
 
+  async getTicketAttachments(ticketId: number): Promise<{ success: boolean; attachments: TicketAttachment[] }> {
+    return mobileFetch(`/tickets/${ticketId}/attachments`)
+  },
+
+  async getTicketAttachmentUrl(attachmentId: number): Promise<string> {
+    const conn = await getConnectionInfo()
+    if (!conn) throw new Error('Nicht verbunden')
+    return `${conn.serverUrl}/api/mobile/tickets/attachment/${attachmentId}?token=${conn.deviceToken}`
+  },
+
   /** Eingangsbeleg-PDF im Browser oeffnen */
   async openEingangsbelegPdf(belegId: number): Promise<void> {
     const conn = await getConnectionInfo()
@@ -172,6 +182,17 @@ export interface TicketMessage {
   body_html: string | null
   is_internal_note: boolean
   has_attachments: boolean
+  created_at: string
+}
+
+export interface TicketAttachment {
+  id: number
+  ticket_id: number
+  message_id: number | null
+  filename: string
+  mime_type: string | null
+  file_size: number | null
+  is_inline: boolean
   created_at: string
 }
 

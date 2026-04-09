@@ -1,10 +1,10 @@
 import { useRef } from 'react'
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, useWindowDimensions } from 'react-native'
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, useWindowDimensions, Linking } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { ArrowLeft, Lock, User, Bot, Settings } from 'lucide-react-native'
+import { ArrowLeft, Lock, User, Bot, Settings, Paperclip, FileText, Image as ImageIcon, File } from 'lucide-react-native'
 import { useQuery } from '@tanstack/react-query'
 import RenderHtml from 'react-native-render-html'
-import { api, Ticket, TicketMessage, TicketDetail } from '../lib/api'
+import { api, Ticket, TicketMessage, TicketAttachment, TicketDetail } from '../lib/api'
 import { colors, spacing } from '../theme'
 
 interface TicketDetailScreenProps {
@@ -85,9 +85,50 @@ function MessageContent({ msg, isAgent }: { msg: TicketMessage; isAgent: boolean
   )
 }
 
-function MessageBubble({ msg }: { msg: TicketMessage }) {
+function getFileIcon(mimeType: string | null) {
+  if (mimeType?.startsWith('image/')) return ImageIcon
+  if (mimeType === 'application/pdf') return FileText
+  return File
+}
+
+function formatFileSize(bytes: number | null): string {
+  if (!bytes) return ''
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function AttachmentList({ attachments }: { attachments: TicketAttachment[] }) {
+  const nonInline = attachments.filter(a => !a.is_inline)
+  if (nonInline.length === 0) return null
+
+  const openAttachment = async (att: TicketAttachment) => {
+    try {
+      const url = await api.getTicketAttachmentUrl(att.id)
+      Linking.openURL(url)
+    } catch {}
+  }
+
+  return (
+    <View style={styles.attachmentList}>
+      {nonInline.map(att => {
+        const Icon = getFileIcon(att.mime_type)
+        return (
+          <TouchableOpacity key={att.id} style={styles.attachmentItem} onPress={() => openAttachment(att)} activeOpacity={0.7}>
+            <Icon size={16} color={colors.primary} />
+            <Text style={styles.attachmentName} numberOfLines={1}>{att.filename}</Text>
+            {att.file_size && <Text style={styles.attachmentSize}>{formatFileSize(att.file_size)}</Text>}
+          </TouchableOpacity>
+        )
+      })}
+    </View>
+  )
+}
+
+function MessageBubble({ msg, attachments }: { msg: TicketMessage; attachments: TicketAttachment[] }) {
   const isAgent = msg.sender_type === 'agent'
   const isSystem = msg.sender_type === 'system' || msg.is_internal_note
+  const msgAttachments = attachments.filter(a => a.message_id === msg.id)
 
   if (isSystem) {
     const bodyText = decodeHtmlEntities(msg.body) || '(Kein Textinhalt)'
@@ -120,9 +161,7 @@ function MessageBubble({ msg }: { msg: TicketMessage }) {
           <Text style={styles.bubbleTime}>{timeAgo(msg.created_at)}</Text>
         </View>
         <MessageContent msg={msg} isAgent={isAgent} />
-        {msg.has_attachments && (
-          <Text style={styles.bubbleAttachment}>Anhang vorhanden</Text>
-        )}
+        {msgAttachments.length > 0 && <AttachmentList attachments={msgAttachments} />}
       </View>
       {isAgent && (
         <View style={[styles.avatarCircle, styles.avatarCircleAgent]}>
@@ -142,8 +181,14 @@ export function TicketDetailScreen({ ticket, onBack }: TicketDetailScreenProps) 
     queryFn: () => api.getTicket(ticket.id),
   })
 
+  const { data: attachmentsData } = useQuery({
+    queryKey: ['ticket-attachments', ticket.id],
+    queryFn: () => api.getTicketAttachments(ticket.id),
+  })
+
   const detail: TicketDetail | undefined = data?.data
   const messages = detail?.ticket_messages || []
+  const attachments = attachmentsData?.attachments || []
   const contactName = ticket.customer_display_name || ticket.supplier_display_name || ticket.customer_email || null
 
   return (
@@ -200,7 +245,7 @@ export function TicketDetailScreen({ ticket, onBack }: TicketDetailScreenProps) 
             <FlatList
               ref={listRef}
               data={messages}
-              renderItem={({ item }) => <MessageBubble msg={item} />}
+              renderItem={({ item }) => <MessageBubble msg={item} attachments={attachments} />}
               keyExtractor={(item) => String(item.id)}
               contentContainerStyle={styles.messageList}
               showsVerticalScrollIndicator={false}
@@ -379,6 +424,31 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginTop: 4,
     fontStyle: 'italic',
+  },
+  attachmentList: {
+    marginTop: 8,
+    gap: 4,
+  },
+  attachmentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.background,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  attachmentName: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.primary,
+    fontWeight: '500',
+  },
+  attachmentSize: {
+    fontSize: 10,
+    color: colors.textMuted,
   },
   // System / internal note
   systemNote: {
