@@ -97,6 +97,15 @@ export const api = {
     return { success: res.success, data: { ...res.ticket, ticket_messages: res.messages || [] } as TicketDetail }
   },
 
+  async searchTracking(params: { search?: string; status?: string; limit?: number; offset?: number } = {}): Promise<{ success: boolean; data: TrackingEntry[]; total?: number }> {
+    const query: Record<string, string> = {}
+    if (params.search) query.search = params.search
+    if (params.status) query.status = params.status
+    if (params.limit) query.limit = String(params.limit)
+    if (params.offset) query.offset = String(params.offset)
+    return mobileFetch('/versand/tracking', query)
+  },
+
   async searchCalls(params: { page?: number; limit?: number; status?: string; search?: string } = {}): Promise<{ success: boolean; data: CallLogEntry[]; pagination: { page: number; limit: number; total: number; pages: number } }> {
     const query: Record<string, string> = {}
     if (params.page) query.page = String(params.page)
@@ -282,6 +291,24 @@ export interface TicketAttachment {
 
 export interface TicketDetail extends Ticket {
   ticket_messages: TicketMessage[]
+}
+
+export interface TrackingEntry {
+  id: number
+  trackingnummer: string
+  dienstleister: string
+  supplier_id: number | null
+  supplier_name: string | null
+  delivery_status: string
+  status_label: string | null
+  reference: string | null
+  matched_order_number: string | null
+  lieferanten_bestellnr: string | null
+  lieferschein_nummer: string | null
+  lieferant: string | null
+  tracking_url: string | null
+  delivered_at: string | null
+  created_at: string
 }
 
 export interface CallLogEntry {

@@ -6,7 +6,7 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native'
 import { createDrawerNavigator, DrawerContentScrollView, DrawerContentComponentProps } from '@react-navigation/drawer'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Users, Settings, Menu, ShoppingCart, MessageSquare, Phone } from 'lucide-react-native'
+import { Users, Settings, Menu, ShoppingCart, MessageSquare, Phone, Truck } from 'lucide-react-native'
 import * as SecureStore from 'expo-secure-store'
 import { getConnectionInfo, ConnectionInfo } from './src/lib/auth'
 import { checkForUpdate } from './src/lib/updater'
@@ -20,6 +20,7 @@ import { TicketsScreen } from './src/screens/TicketsScreen'
 import { TicketDetailScreen } from './src/screens/TicketDetailScreen'
 import { SettingsScreen } from './src/screens/SettingsScreen'
 import { TelefonScreen } from './src/screens/TelefonScreen'
+import { SendungsverfolgungScreen } from './src/screens/SendungsverfolgungScreen'
 import { colors, darkColors, lightColors, setThemeColors, ThemeContext, ThemeMode } from './src/theme'
 
 const queryClient = new QueryClient()
@@ -46,6 +47,7 @@ const MENU_ITEMS = [
   { name: 'Auftraege', icon: ShoppingCart, label: 'Aufträge' },
   { name: 'Tickets', icon: MessageSquare, label: 'Tickets' },
   { name: 'Telefon', icon: Phone, label: 'Telefon' },
+  { name: 'Versand', icon: Truck, label: 'Versand' },
   { name: 'Einstellungen', icon: Settings, label: 'Einstellungen' },
 ]
 
@@ -160,6 +162,16 @@ function TelefonPage({ navigation }: any) {
   )
 }
 
+function VersandPage({ navigation }: any) {
+  const styles = createStyles()
+  return (
+    <View style={styles.screenContainer}>
+      <ScreenHeader title="Sendungsverfolgung" navigation={navigation} />
+      <SendungsverfolgungScreen />
+    </View>
+  )
+}
+
 // Connection wird als globale Variable gehalten (von App gesetzt)
 let _connection: ConnectionInfo | null = null
 let _onDisconnect: (() => void) | null = null
@@ -246,6 +258,7 @@ export default function App() {
               <Drawer.Screen name="Auftraege" component={AuftraegePage} />
               <Drawer.Screen name="Tickets" component={TicketsPage} />
               <Drawer.Screen name="Telefon" component={TelefonPage} />
+              <Drawer.Screen name="Versand" component={VersandPage} />
               <Drawer.Screen name="Einstellungen" component={SettingsPage} />
             </Drawer.Navigator>
           </NavigationContainer>
