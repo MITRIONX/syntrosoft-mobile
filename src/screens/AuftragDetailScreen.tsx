@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native'
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Linking } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { ArrowLeft, User, MapPin, Package, Euro, Truck, CreditCard, Hash, FileText } from 'lucide-react-native'
+import { ArrowLeft, User, MapPin, Package, Euro, Truck, CreditCard, Hash, FileText, FileCheck } from 'lucide-react-native'
 import { useQuery } from '@tanstack/react-query'
-import { api, Auftrag, AuftragDetail, AuftragItem } from '../lib/api'
+import { api, Auftrag, AuftragDetail, AuftragItem, AuftragRelated } from '../lib/api'
 import { colors, spacing } from '../theme'
 
 interface AuftragDetailScreenProps {
@@ -82,6 +82,148 @@ function AddressCard({
   )
 }
 
+const TRACKING_URLS: Record<string, string> = {
+  DHL: 'https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=',
+  DPD: 'https://tracking.dpd.de/status/de_DE/parcel/',
+}
+
+const DELIVERY_STATUS_COLORS: Record<string, string> = {
+  delivered: '#22c55e',
+  in_transit: '#3b82f6',
+  unknown: '#6b7280',
+}
+
+function FulfillmentSection({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <View style={fulfillStyles.section}>
+      <View style={fulfillStyles.sectionHeader}>
+        {icon}
+        <Text style={fulfillStyles.sectionTitle}>{title}</Text>
+      </View>
+      {children}
+    </View>
+  )
+}
+
+function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
+  const hasAny =
+    related &&
+    (related.purchaseOrders.length > 0 ||
+      related.shippingLabels.length > 0 ||
+      related.trackingData.length > 0 ||
+      related.eingangsbelege.length > 0)
+
+  const openTracking = (carrier: string, trackingNumber: string) => {
+    const base = TRACKING_URLS[carrier?.toUpperCase()] || null
+    if (base) {
+      Linking.openURL(base + encodeURIComponent(trackingNumber))
+    }
+  }
+
+  return (
+    <View style={[styles.card, fulfillStyles.card]}>
+      <View style={styles.cardHeader}>
+        <Truck size={18} color={colors.primary} />
+        <Text style={styles.cardTitle}>Fulfillment</Text>
+      </View>
+
+      {!related ? (
+        <ActivityIndicator size="small" color={colors.textMuted} style={{ alignSelf: 'flex-start', marginTop: 4 }} />
+      ) : !hasAny ? (
+        <Text style={fulfillStyles.emptyText}>Keine Fulfillment-Daten vorhanden</Text>
+      ) : (
+        <>
+          {related.purchaseOrders.length > 0 && (
+            <FulfillmentSection title="Lieferantenbestellungen" icon={<Package size={13} color={colors.textMuted} />}>
+              {related.purchaseOrders.map((po: any, i: number) => (
+                <View key={po.id} style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}>
+                  <View style={fulfillStyles.rowMain}>
+                    <Text style={fulfillStyles.rowTitle}>{po.order_number}</Text>
+                    <Text style={fulfillStyles.rowSub} numberOfLines={1}>{po.supplier_name}</Text>
+                  </View>
+                  <View style={fulfillStyles.rowRight}>
+                    <View style={[fulfillStyles.minibadge, { backgroundColor: (STATUS_COLORS[po.status] || '#6b7280') + '25' }]}>
+                      <Text style={[fulfillStyles.minibadgeText, { color: STATUS_COLORS[po.status] || '#6b7280' }]}>
+                        {(po.status || '').replace(/_/g, ' ')}
+                      </Text>
+                    </View>
+                    <Text style={fulfillStyles.rowDate}>{formatDate(po.order_date)}</Text>
+                  </View>
+                </View>
+              ))}
+            </FulfillmentSection>
+          )}
+
+          {related.shippingLabels.length > 0 && (
+            <FulfillmentSection title="Versand" icon={<MapPin size={13} color={colors.textMuted} />}>
+              {related.shippingLabels.map((label: any, i: number) => (
+                <TouchableOpacity
+                  key={label.id}
+                  style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}
+                  onPress={() => openTracking(label.carrier, label.tracking_number)}
+                  activeOpacity={0.7}
+                >
+                  <View style={fulfillStyles.rowMain}>
+                    <Text style={fulfillStyles.rowTitle}>{label.carrier}</Text>
+                    <Text style={[fulfillStyles.rowSub, fulfillStyles.trackingLink]} numberOfLines={1}>
+                      {label.tracking_number}
+                    </Text>
+                  </View>
+                  <View style={[fulfillStyles.minibage, { backgroundColor: (STATUS_COLORS[label.status] || '#6b7280') + '25' }]}>
+                    <Text style={[fulfillStyles.minibadgeText, { color: STATUS_COLORS[label.status] || '#6b7280' }]}>
+                      {(label.status || '').replace(/_/g, ' ')}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </FulfillmentSection>
+          )}
+
+          {related.trackingData.length > 0 && (
+            <FulfillmentSection title="Tracking" icon={<Truck size={13} color={colors.textMuted} />}>
+              {related.trackingData.map((t: any, i: number) => {
+                const statusColor = DELIVERY_STATUS_COLORS[t.delivery_status] || DELIVERY_STATUS_COLORS.unknown
+                return (
+                  <View key={t.id} style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}>
+                    <View style={fulfillStyles.rowMain}>
+                      <Text style={fulfillStyles.rowTitle}>{t.trackingnummer}</Text>
+                      <Text style={fulfillStyles.rowSub}>{t.dienstleister}</Text>
+                    </View>
+                    <View style={fulfillStyles.rowRight}>
+                      <View style={[fulfillStyles.minibage, { backgroundColor: statusColor + '25' }]}>
+                        <Text style={[fulfillStyles.minibadgeText, { color: statusColor }]}>
+                          {t.delivery_status === 'delivered' ? 'Zugestellt' : t.delivery_status === 'in_transit' ? 'Unterwegs' : t.delivery_status || 'Unbekannt'}
+                        </Text>
+                      </View>
+                      {t.delivered_at && (
+                        <Text style={fulfillStyles.rowDate}>{formatDate(t.delivered_at)}</Text>
+                      )}
+                    </View>
+                  </View>
+                )
+              })}
+            </FulfillmentSection>
+          )}
+
+          {related.eingangsbelege.length > 0 && (
+            <FulfillmentSection title="Eingangsbelege / AB" icon={<FileCheck size={13} color={colors.textMuted} />}>
+              {related.eingangsbelege.map((beleg: any, i: number) => (
+                <View key={beleg.id} style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}>
+                  <View style={fulfillStyles.rowMain}>
+                    <Text style={fulfillStyles.rowTitle}>{beleg.beleg_nummer}</Text>
+                    <Text style={fulfillStyles.rowSub}>{formatDate(beleg.beleg_datum)}</Text>
+                  </View>
+                  <Text style={fulfillStyles.rowAmount}>{formatCurrency(beleg.netto_betrag)}</Text>
+                </View>
+              ))}
+            </FulfillmentSection>
+          )}
+        </>
+      )}
+    </View>
+  )
+}
+
 export function AuftragDetailScreen({ auftrag, onBack }: AuftragDetailScreenProps) {
   const insets = useSafeAreaInsets()
   const [expandedAddress, setExpandedAddress] = useState<'billing' | 'shipping' | null>(null)
@@ -90,6 +232,14 @@ export function AuftragDetailScreen({ auftrag, onBack }: AuftragDetailScreenProp
     queryKey: ['auftrag', auftrag.id],
     queryFn: () => api.getAuftrag(auftrag.id),
   })
+
+  const { data: relatedData } = useQuery({
+    queryKey: ['auftrag-related', auftrag.id],
+    queryFn: () => api.getAuftragRelated(auftrag.id),
+    enabled: !!data?.data,
+  })
+
+  const related: AuftragRelated | undefined = relatedData?.data
 
   const detail: AuftragDetail | undefined = data?.data
 
@@ -244,6 +394,9 @@ export function AuftragDetailScreen({ auftrag, onBack }: AuftragDetailScreenProp
               </View>
             ))}
           </View>
+
+          {/* Fulfillment */}
+          <FulfillmentCard related={related} />
 
           {/* Notizen */}
           {detail.notes && (
@@ -480,5 +633,87 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 20,
     marginTop: 4,
+  },
+})
+
+const fulfillStyles = StyleSheet.create({
+  card: {
+    flex: 0,
+  },
+  emptyText: {
+    fontSize: 13,
+    color: colors.textMuted,
+    paddingVertical: 4,
+  },
+  section: {
+    marginTop: spacing.sm,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 7,
+    gap: 8,
+  },
+  rowBorder: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  rowMain: {
+    flex: 1,
+    minWidth: 0,
+  },
+  rowTitle: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.text,
+  },
+  rowSub: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 1,
+  },
+  trackingLink: {
+    color: colors.primary,
+  },
+  rowRight: {
+    alignItems: 'flex-end',
+    gap: 3,
+  },
+  rowDate: {
+    fontSize: 11,
+    color: colors.textMuted,
+  },
+  rowAmount: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  minibadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  minibage: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  minibadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    textTransform: 'capitalize',
   },
 })

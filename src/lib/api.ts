@@ -65,6 +65,10 @@ export const api = {
   async getAuftrag(id: number): Promise<{ success: boolean; data: AuftragDetail }> {
     return mobileFetch(`/auftraege/${id}`)
   },
+
+  async getAuftragRelated(id: number): Promise<{ success: boolean; data: AuftragRelated }> {
+    return mobileFetch(`/auftraege/${id}/related`)
+  },
 }
 
 export interface Auftrag {
@@ -107,6 +111,14 @@ export interface AuftragDetail extends Auftrag {
   shipping_country: string | null
   notes: string | null
   items: AuftragItem[]
+}
+
+export interface AuftragRelated {
+  purchaseOrders: any[]
+  shippingLabels: any[]
+  trackingData: any[]
+  eingangsbelege: any[]
+  shoppingListItems: any[]
 }
 
 export interface AuftragItem {
