@@ -96,7 +96,9 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
             <Euro size={12} color={colors.textMuted} />
             <Text style={[styles.cardDetailText, styles.amount]}>{formatCurrency(item.total_gross)}</Text>
           </View>
-          <StatusBadge status={(item as any).computed_status || item.status} />
+          <View style={{ flex: 1, alignItems: 'flex-end' }}>
+            <StatusBadge status={(item as any).computed_status || item.status} />
+          </View>
         </View>
       </TouchableOpacity>
     )
@@ -229,6 +231,7 @@ function createStyles() { return StyleSheet.create({
   },
   cardRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 16,
     paddingLeft: 44,
   },
