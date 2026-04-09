@@ -13,8 +13,9 @@ function formatDate(dateStr: string | null): string {
   return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`
 }
 
-function formatCurrency(value: number): string {
-  return value.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
+function formatCurrency(value: number | null | undefined): string {
+  if (value == null) return '0,00 €'
+  return Number(value).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
 }
 
 export function BestellungenScreen() {
@@ -41,7 +42,7 @@ export function BestellungenScreen() {
     }),
   })
 
-  const orders = data?.data || []
+  const orders = Array.isArray(data?.data) ? data.data : []
 
   const renderOrder = ({ item }: { item: PurchaseOrder }) => {
     const delivered = (item.qty_delivered || 0)
