@@ -8,6 +8,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Users, Settings, Menu, ShoppingCart } from 'lucide-react-native'
 import { getConnectionInfo, ConnectionInfo } from './src/lib/auth'
+import { checkForUpdate } from './src/lib/updater'
 import { Kunde, Auftrag } from './src/lib/api'
 import { ScanScreen } from './src/screens/ScanScreen'
 import { KundenScreen } from './src/screens/KundenScreen'
@@ -147,6 +148,7 @@ export default function App() {
       setConnection(info)
       setLoading(false)
     })
+    checkForUpdate()
   }, [])
 
   if (loading) return null
