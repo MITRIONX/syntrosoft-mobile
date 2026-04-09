@@ -49,15 +49,32 @@ function ColorBadge({ name, color }: { name: string; color: string }) {
   )
 }
 
+function sanitizeHtmlForDarkMode(html: string): string {
+  // <style> Blocks komplett entfernen
+  let cleaned = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+  // bgcolor Attribute entfernen
+  cleaned = cleaned.replace(/\s*bgcolor\s*=\s*["'][^"']*["']/gi, '')
+  // Inline color/background-color entfernen aus style Attributen
+  cleaned = cleaned.replace(/style\s*=\s*"([^"]*)"/gi, (_match, styles: string) => {
+    const filtered = styles
+      .split(';')
+      .filter(s => {
+        const prop = s.split(':')[0]?.trim().toLowerCase()
+        return prop !== 'color' && prop !== 'background-color' && prop !== 'background' && prop !== 'border-color'
+      })
+      .join(';')
+    return `style="${filtered}"`
+  })
+  return cleaned
+}
+
 function MessageContent({ msg, isAgent }: { msg: TicketMessage; isAgent: boolean }) {
   const { width } = useWindowDimensions()
   const contentWidth = width * 0.78 - 40
 
   if (msg.body_html) {
-    // Prüfen ob HTML nach Entity-Decoding tatsächlich sichtbaren Text hat
     const strippedHtml = msg.body_html.replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').replace(/&zwnj;/gi, '').replace(/\s+/g, ' ').trim()
     if (strippedHtml.length < 3) {
-      // HTML hat keinen sichtbaren Inhalt, zeige Plain-Text Fallback
       const bodyText = decodeHtmlEntities(msg.body) || '(Kein Textinhalt)'
       return (
         <Text style={[styles.bubbleBody, isAgent ? styles.bubbleBodyAgent : styles.bubbleBodyCustomer]} selectable>
@@ -66,16 +83,18 @@ function MessageContent({ msg, isAgent }: { msg: TicketMessage; isAgent: boolean
       )
     }
 
+    const cleanedHtml = sanitizeHtmlForDarkMode(msg.body_html)
+
     const htmlStyles = {
       body: { color: colors.text, fontSize: 14, lineHeight: 20 },
       p: { color: colors.text, marginTop: 0, marginBottom: 8 },
       span: { color: colors.text },
       div: { color: colors.text },
+      font: { color: colors.text },
       li: { color: colors.text },
-      td: { color: colors.text, padding: 4, borderColor: colors.border, borderWidth: 0.5 },
-      th: { color: colors.text, padding: 4, borderColor: colors.border, borderWidth: 0.5, fontWeight: '600' as const },
+      td: { color: colors.text, padding: 4 },
+      th: { color: colors.text, padding: 4, fontWeight: '600' as const },
       a: { color: colors.primary },
-      table: { borderColor: colors.border },
       img: { maxWidth: contentWidth },
       h1: { color: colors.text },
       h2: { color: colors.text },
@@ -85,10 +104,10 @@ function MessageContent({ msg, isAgent }: { msg: TicketMessage; isAgent: boolean
     return (
       <RenderHtml
         contentWidth={contentWidth}
-        source={{ html: msg.body_html }}
+        source={{ html: cleanedHtml }}
         tagsStyles={htmlStyles}
         baseStyle={{ color: colors.text }}
-        ignoredStyles={['color', 'backgroundColor', 'background', 'background-color']}
+        ignoredStyles={['color', 'backgroundColor', 'background', 'background-color', 'border-color']}
         defaultTextProps={{ selectable: true, style: { color: colors.text } }}
         enableExperimentalMarginCollapsing
       />
