@@ -106,12 +106,11 @@ function FulfillmentSection({ title, icon, children }: { title: string; icon: Re
 }
 
 function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
-  const hasAny =
-    related &&
-    (related.purchaseOrders.length > 0 ||
-      related.shippingLabels.length > 0 ||
-      related.trackingData.length > 0 ||
-      related.eingangsbelege.length > 0)
+  const po = related?.purchaseOrders || []
+  const labels = related?.shippingLabels || []
+  const tracking = related?.trackingData || []
+  const belege = related?.eingangsbelege || []
+  const hasAny = related && (po.length > 0 || labels.length > 0 || tracking.length > 0 || belege.length > 0)
 
   const openTracking = (carrier: string, trackingNumber: string) => {
     const base = TRACKING_URLS[carrier?.toUpperCase()] || null
@@ -133,9 +132,9 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
         <Text style={fulfillStyles.emptyText}>Keine Fulfillment-Daten vorhanden</Text>
       ) : (
         <>
-          {related.purchaseOrders.length > 0 && (
+          {po.length > 0 && (
             <FulfillmentSection title="Lieferantenbestellungen" icon={<Package size={13} color={colors.textMuted} />}>
-              {related.purchaseOrders.map((po: any, i: number) => (
+              {po.map((po: any, i: number) => (
                 <View key={po.id} style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}>
                   <View style={fulfillStyles.rowMain}>
                     <Text style={fulfillStyles.rowTitle}>{po.order_number}</Text>
@@ -154,9 +153,9 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
             </FulfillmentSection>
           )}
 
-          {related.shippingLabels.length > 0 && (
+          {labels.length > 0 && (
             <FulfillmentSection title="Versand" icon={<MapPin size={13} color={colors.textMuted} />}>
-              {related.shippingLabels.map((label: any, i: number) => (
+              {labels.map((label: any, i: number) => (
                 <TouchableOpacity
                   key={label.id}
                   style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}
@@ -179,9 +178,9 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
             </FulfillmentSection>
           )}
 
-          {related.trackingData.length > 0 && (
+          {tracking.length > 0 && (
             <FulfillmentSection title="Tracking" icon={<Truck size={13} color={colors.textMuted} />}>
-              {related.trackingData.map((t: any, i: number) => {
+              {tracking.map((t: any, i: number) => {
                 const statusColor = DELIVERY_STATUS_COLORS[t.delivery_status] || DELIVERY_STATUS_COLORS.unknown
                 return (
                   <View key={t.id} style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}>
@@ -205,15 +204,15 @@ function FulfillmentCard({ related }: { related: AuftragRelated | undefined }) {
             </FulfillmentSection>
           )}
 
-          {related.eingangsbelege.length > 0 && (
+          {belege.length > 0 && (
             <FulfillmentSection title="Eingangsbelege / AB" icon={<FileCheck size={13} color={colors.textMuted} />}>
-              {related.eingangsbelege.map((beleg: any, i: number) => (
+              {belege.map((beleg: any, i: number) => (
                 <View key={beleg.id} style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}>
                   <View style={fulfillStyles.rowMain}>
                     <Text style={fulfillStyles.rowTitle}>{beleg.beleg_nummer}</Text>
                     <Text style={fulfillStyles.rowSub}>{formatDate(beleg.beleg_datum)}</Text>
                   </View>
-                  <Text style={fulfillStyles.rowAmount}>{formatCurrency(beleg.netto_betrag)}</Text>
+                  <Text style={fulfillStyles.rowAmount}>{formatCurrency(beleg.netto_betrag || 0)}</Text>
                 </View>
               ))}
             </FulfillmentSection>
