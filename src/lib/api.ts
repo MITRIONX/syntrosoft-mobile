@@ -109,6 +109,21 @@ export const api = {
     return mobilePut(`/tickets/${id}`, updates)
   },
 
+  async replyToTicket(ticketId: number, body: string, senderName?: string): Promise<{ success: boolean }> {
+    const conn = await getConnectionInfo()
+    if (!conn) throw new Error('Nicht verbunden')
+    const res = await fetch(`${conn.serverUrl}/api/mobile/tickets/${ticketId}/reply`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${conn.deviceToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ body, sender_type: 'agent', sender_name: senderName || 'Mobile App' }),
+    })
+    if (!res.ok) throw new Error(`Fehler: ${res.status}`)
+    return res.json()
+  },
+
   async getTicketAttachments(ticketId: number): Promise<{ success: boolean; attachments: TicketAttachment[] }> {
     return mobileFetch(`/tickets/${ticketId}/attachments`)
   },

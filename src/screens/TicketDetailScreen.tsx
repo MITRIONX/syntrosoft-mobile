@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Linking, Modal, ScrollView } from 'react-native'
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Linking, Modal, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { ArrowLeft, Lock, User, Bot, Settings, Paperclip, FileText, Image as ImageIcon, File, ChevronDown, X, Check } from 'lucide-react-native'
+import { ArrowLeft, Lock, User, Bot, Settings, Paperclip, FileText, Image as ImageIcon, File, ChevronDown, X, Check, Send } from 'lucide-react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { WebView } from 'react-native-webview'
 import { api, Ticket, TicketMessage, TicketAttachment, TicketDetail, TicketStatus, TicketAgent } from '../lib/api'
@@ -250,6 +250,8 @@ export function TicketDetailScreen({ ticket, onBack }: TicketDetailScreenProps) 
   const queryClient = useQueryClient()
   const [statusModalVisible, setStatusModalVisible] = useState(false)
   const [agentModalVisible, setAgentModalVisible] = useState(false)
+  const [replyText, setReplyText] = useState('')
+  const [sending, setSending] = useState(false)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['ticket', ticket.id],
@@ -287,6 +289,17 @@ export function TicketDetailScreen({ ticket, onBack }: TicketDetailScreenProps) 
       queryClient.invalidateQueries({ queryKey: ['ticket', ticket.id] })
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
     } catch {}
+  }
+
+  const handleSendReply = async () => {
+    if (!replyText.trim() || sending) return
+    setSending(true)
+    try {
+      await api.replyToTicket(ticket.id, replyText.trim())
+      setReplyText('')
+      queryClient.invalidateQueries({ queryKey: ['ticket', ticket.id] })
+    } catch {}
+    setSending(false)
   }
 
   const handleUpdateAgent = async (agentId: number | null) => {
@@ -366,6 +379,31 @@ export function TicketDetailScreen({ ticket, onBack }: TicketDetailScreenProps) 
           )}
         </>
       ) : null}
+
+      {/* Reply bar */}
+      {detail && (
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={[styles.replyBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+            <TextInput
+              style={styles.replyInput}
+              placeholder="Antwort schreiben..."
+              placeholderTextColor={colors.textMuted}
+              value={replyText}
+              onChangeText={setReplyText}
+              multiline
+              maxLength={5000}
+            />
+            <TouchableOpacity
+              style={[styles.sendButton, (!replyText.trim() || sending) && styles.sendButtonDisabled]}
+              onPress={handleSendReply}
+              disabled={!replyText.trim() || sending}
+              activeOpacity={0.7}
+            >
+              <Send size={18} color={replyText.trim() && !sending ? '#fff' : colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      )}
 
       <PickerModal
         visible={statusModalVisible}
@@ -584,6 +622,39 @@ const styles = StyleSheet.create({
   attachmentSize: {
     fontSize: 10,
     color: colors.textMuted,
+  },
+  replyBar: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: spacing.md,
+    paddingTop: 8,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: 8,
+  },
+  replyInput: {
+    flex: 1,
+    backgroundColor: colors.background,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: colors.text,
+    maxHeight: 100,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  sendButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sendButtonDisabled: {
+    backgroundColor: colors.surfaceHover,
   },
   modalOverlay: {
     flex: 1,
