@@ -57,4 +57,65 @@ export const api = {
   async getKundeTickets(id: number): Promise<any> {
     return mobileFetch(`/kunden/${id}/tickets`)
   },
+
+  async searchAuftraege(search: string, limit = 20, offset = 0): Promise<{ success: boolean; data: Auftrag[]; total: number }> {
+    return mobileFetch('/auftraege', { search, limit: String(limit), offset: String(offset) })
+  },
+
+  async getAuftrag(id: number): Promise<{ success: boolean; data: AuftragDetail }> {
+    return mobileFetch(`/auftraege/${id}`)
+  },
+}
+
+export interface Auftrag {
+  id: number
+  order_number: string
+  customer_number: string | null
+  customer_display_name: string | null
+  order_date: string
+  status: string
+  is_cancelled: boolean
+  total_net: number
+  total_gross: number
+  currency: string
+  items_count: number
+  billing_company: string | null
+  billing_first_name: string | null
+  billing_last_name: string | null
+  billing_city: string | null
+  shipping_company: string | null
+  shipping_city: string | null
+  payment_method: string | null
+}
+
+export interface AuftragDetail extends Auftrag {
+  subtotal_net: number
+  subtotal_gross: number
+  shipping_cost: number
+  tax_amount: number
+  billing_street: string | null
+  billing_postal_code: string | null
+  billing_country: string | null
+  billing_email: string | null
+  billing_phone: string | null
+  shipping_first_name: string | null
+  shipping_last_name: string | null
+  shipping_street: string | null
+  shipping_postal_code: string | null
+  shipping_country: string | null
+  notes: string | null
+  items: AuftragItem[]
+}
+
+export interface AuftragItem {
+  id: number
+  position_number: number
+  article_number: string | null
+  article_name: string | null
+  quantity: number
+  unit: string
+  unit_price_net: number
+  unit_price_gross: number
+  total_net: number
+  total_gross: number
 }
