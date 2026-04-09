@@ -49,12 +49,19 @@ function ColorBadge({ name, color }: { name: string; color: string }) {
   )
 }
 
-function sanitizeHtmlForDarkMode(html: string): string {
-  // <style> Blocks komplett entfernen
-  let cleaned = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-  // bgcolor Attribute entfernen
+function isComplexEmailHtml(html: string): boolean {
+  return /<!DOCTYPE|<html|<head/i.test(html)
+}
+
+function extractBodyHtml(html: string): string {
+  // Nur den <body> Inhalt extrahieren
+  const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i)
+  const body = bodyMatch ? bodyMatch[1] : html
+  // <style> Blocks entfernen
+  let cleaned = body.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+  // bgcolor entfernen
   cleaned = cleaned.replace(/\s*bgcolor\s*=\s*["'][^"']*["']/gi, '')
-  // Inline color/background-color entfernen aus style Attributen
+  // Farb-Styles aus Inline-Styles entfernen
   cleaned = cleaned.replace(/style\s*=\s*"([^"]*)"/gi, (_match, styles: string) => {
     const filtered = styles
       .split(';')
@@ -73,7 +80,13 @@ function MessageContent({ msg, isAgent }: { msg: TicketMessage; isAgent: boolean
   const contentWidth = width * 0.78 - 40
 
   if (msg.body_html) {
-    const strippedHtml = msg.body_html.replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').replace(/&zwnj;/gi, '').replace(/\s+/g, ' ').trim()
+    // Komplexe E-Mail-HTMLs (mit DOCTYPE/html/head) -> Body extrahieren
+    const htmlToRender = isComplexEmailHtml(msg.body_html)
+      ? extractBodyHtml(msg.body_html)
+      : msg.body_html
+
+    // Pruefen ob nach Bereinigung sichtbarer Text vorhanden ist
+    const strippedHtml = htmlToRender.replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').replace(/&zwnj;/gi, '').replace(/\s+/g, ' ').trim()
     if (strippedHtml.length < 3) {
       const bodyText = decodeHtmlEntities(msg.body) || '(Kein Textinhalt)'
       return (
@@ -82,8 +95,6 @@ function MessageContent({ msg, isAgent }: { msg: TicketMessage; isAgent: boolean
         </Text>
       )
     }
-
-    const cleanedHtml = sanitizeHtmlForDarkMode(msg.body_html)
 
     const htmlStyles = {
       body: { color: colors.text, fontSize: 14, lineHeight: 20 },
@@ -104,7 +115,7 @@ function MessageContent({ msg, isAgent }: { msg: TicketMessage; isAgent: boolean
     return (
       <RenderHtml
         contentWidth={contentWidth}
-        source={{ html: cleanedHtml }}
+        source={{ html: htmlToRender }}
         tagsStyles={htmlStyles}
         baseStyle={{ color: colors.text }}
         ignoredStyles={['color', 'backgroundColor', 'background', 'background-color', 'border-color']}
