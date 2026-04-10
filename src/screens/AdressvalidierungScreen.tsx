@@ -71,7 +71,11 @@ interface KorrekturModalProps {
 
 function KorrekturModal({ item, onClose, onUpdated, autoGoogle }: KorrekturModalProps) {
   const styles = createStyles()
+  const [company, setCompany] = useState((item as any).shippingCompany || '')
+  const [firstName, setFirstName] = useState((item as any).shippingFirstName || '')
+  const [lastName, setLastName] = useState((item as any).shippingLastName || '')
   const [street, setStreet] = useState(item.suggestion?.street ?? item.shippingStreet)
+  const [addressLine2, setAddressLine2] = useState((item as any).shippingAddressLine2 || '')
   const [postalCode, setPostalCode] = useState(item.suggestion?.postalCode ?? item.shippingPostalCode)
   const [city, setCity] = useState(item.suggestion?.city ?? item.shippingCity)
   const [googleResult, setGoogleResult] = useState<{ formattedAddress?: string; structured?: { street: string; postalCode: string; city: string } } | null>(null)
@@ -123,10 +127,14 @@ function KorrekturModal({ item, onClose, onUpdated, autoGoogle }: KorrekturModal
     setSaving(true)
     try {
       await api.updateOrderAddress(item.orderId, {
+        shipping_company: company,
+        shipping_first_name: firstName,
+        shipping_last_name: lastName,
         shipping_street: street,
+        shipping_address_line2: addressLine2,
         shipping_postal_code: postalCode,
         shipping_city: city,
-      })
+      } as any)
       // re-validate
       await api.validateOrderAddresses([item.orderId])
       onUpdated()
@@ -178,12 +186,54 @@ function KorrekturModal({ item, onClose, onUpdated, autoGoogle }: KorrekturModal
             {/* Korrektur */}
             <View style={[styles.modalSection, styles.sectionCorrection]}>
               <Text style={styles.modalSectionTitle}>Korrektur</Text>
+              <Text style={styles.inputLabel}>Firma</Text>
+              <TextInput
+                style={styles.textInput}
+                value={company}
+                onChangeText={setCompany}
+                placeholderTextColor={colors.textMuted}
+                placeholder="Firma"
+                autoCapitalize="words"
+              />
+              <View style={styles.inputRow}>
+                <View style={styles.inputHalf}>
+                  <Text style={styles.inputLabel}>Vorname</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={firstName}
+                    onChangeText={setFirstName}
+                    placeholderTextColor={colors.textMuted}
+                    placeholder="Vorname"
+                    autoCapitalize="words"
+                  />
+                </View>
+                <View style={styles.inputHalf}>
+                  <Text style={styles.inputLabel}>Nachname</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={lastName}
+                    onChangeText={setLastName}
+                    placeholderTextColor={colors.textMuted}
+                    placeholder="Nachname"
+                    autoCapitalize="words"
+                  />
+                </View>
+              </View>
               <Text style={styles.inputLabel}>Strasse</Text>
               <TextInput
                 style={styles.textInput}
                 value={street}
                 onChangeText={setStreet}
                 placeholderTextColor={colors.textMuted}
+                autoCapitalize="words"
+              />
+              <Text style={styles.inputLabel}>Adresszusatz</Text>
+              <TextInput
+                style={styles.textInput}
+                value={addressLine2}
+                onChangeText={setAddressLine2}
+                placeholderTextColor={colors.textMuted}
+                placeholder="z.B. Hinterhaus, 2. OG"
                 autoCapitalize="words"
               />
               <Text style={styles.inputLabel}>PLZ</Text>
@@ -769,6 +819,13 @@ function createStyles() { return StyleSheet.create({
     fontSize: 14,
     color: colors.text,
     marginBottom: 2,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  inputHalf: {
+    flex: 1,
   },
   inputLabel: {
     fontSize: 12,

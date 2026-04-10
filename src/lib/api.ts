@@ -371,7 +371,7 @@ export const api = {
     return mobilePost('/versand/shipping/validate-address-google', body)
   },
 
-  async updateOrderAddress(orderId: number, body: { shipping_street?: string; shipping_postal_code?: string; shipping_city?: string; shipping_country?: string }): Promise<{ success: boolean }> {
+  async updateOrderAddress(orderId: number, body: { shipping_company?: string; shipping_first_name?: string; shipping_last_name?: string; shipping_street?: string; shipping_address_line2?: string; shipping_postal_code?: string; shipping_city?: string; shipping_country?: string }): Promise<{ success: boolean }> {
     return mobilePut(`/versand/shipping/order/${orderId}/address`, body)
   },
 
