@@ -127,12 +127,26 @@ function FulfillmentSection({ title, icon, children }: { title: string; icon: Re
 /** Dynamischer Status basierend auf Fulfillment-Daten */
 function computeStatus(detail: AuftragDetail, related: AuftragRelated | undefined): { label: string; color: string } {
   if (detail.is_cancelled) return { label: 'Storniert', color: '#ef4444' }
+  // Prüfe computed_status vom Backend (wenn vorhanden)
+  const cs = (detail as any).computed_status
+  if (cs) {
+    const map: Record<string, { label: string; color: string }> = {
+      zugestellt: { label: 'Zugestellt', color: '#22c55e' },
+      versendet: { label: 'Versendet', color: '#a855f7' },
+      bestellt: { label: 'Bestellt', color: '#f59e0b' },
+      storniert: { label: 'Storniert', color: '#ef4444' },
+    }
+    if (map[cs]) return map[cs]
+  }
+  // Fallback: aus Related-Daten berechnen
   const tracking = related?.trackingData || []
   const po = related?.purchaseOrders || []
+  const shopping = related?.shoppingListItems || []
   const delivered = tracking.filter((t: any) => t.delivery_status === 'delivered')
   if (delivered.length > 0 && delivered.length === tracking.length) return { label: 'Zugestellt', color: '#22c55e' }
   if (tracking.length > 0) return { label: 'Versendet', color: '#a855f7' }
   if (po.length > 0) return { label: 'Bestellt', color: '#f59e0b' }
+  if (shopping.length > 0) return { label: 'Auf EK-Liste', color: '#f59e0b' }
   return { label: 'Offen', color: '#3b82f6' }
 }
 
@@ -408,7 +422,7 @@ export function AuftragDetailScreen({ auftrag, onBack }: AuftragDetailScreenProp
                 <View style={[styles.badge, { backgroundColor: s.color + '20', borderColor: s.color + '40' }]}>
                   <Text style={[styles.badgeText, { color: s.color }]}>{s.label}</Text>
                 </View>
-                <Text style={styles.dateText}>{formatDate(detail.order_date)}</Text>
+                <Text style={styles.dateText}>{formatDate((detail as any).created_at || detail.order_date)}</Text>
               </View>
             )
           })()}
@@ -460,7 +474,7 @@ export function AuftragDetailScreen({ auftrag, onBack }: AuftragDetailScreenProp
             <View style={styles.cardHeader}>
               <Euro size={18} color={colors.primary} />
               <Text style={styles.cardTitle}>Beträge</Text>
-              <Text style={styles.cardHeaderDate}>{formatDate(detail.order_date)}</Text>
+              <Text style={styles.cardHeaderDate}>{formatDate((detail as any).created_at || detail.order_date)}</Text>
             </View>
             <View style={styles.grid}>
               <View style={styles.gridItem}>

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, ScrollView, Alert } from 'react-native'
+import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, ScrollView, Alert, RefreshControl } from 'react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Search, ShoppingCart, X, CheckCircle, Minus, Plus, PackageCheck } from 'lucide-react-native'
 import { api, Auftrag, OrderItem } from '../lib/api'
@@ -98,10 +98,10 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
     return () => clearTimeout(timeout)
   }, [])
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ['auftraege', debouncedSearch],
     queryFn: () => api.searchAuftraege(debouncedSearch, 100),
-    enabled: true,
+    staleTime: 30000,
   })
 
   const allAuftraege = data?.data || []
@@ -372,6 +372,7 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
         />
       )}
 
