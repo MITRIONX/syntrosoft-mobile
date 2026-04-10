@@ -36,11 +36,15 @@ function formatDate(dateStr: string): string {
 const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
   new: { color: '#3b82f6', label: 'Offen' },
   offen: { color: '#3b82f6', label: 'Offen' },
-  bestellt: { color: '#f59e0b', label: 'Bestellt' },
-  in_bearbeitung: { color: '#f59e0b', label: 'In Bearbeitung' },
-  versendet: { color: '#a855f7', label: 'Versendet' },
-  zugestellt: { color: '#22c55e', label: 'Zugestellt' },
-  abgeschlossen: { color: '#22c55e', label: 'Abgeschlossen' },
+  teilbestellt: { color: '#f59e0b', label: 'Teilbestellt' },
+  bestellt: { color: '#22c55e', label: 'Bestellt' },
+  storniert: { color: '#ef4444', label: 'Storniert' },
+}
+
+const INVOICE_STATUS_CONFIG: Record<string, { color: string; label: string }> = {
+  ohne_berechnung: { color: '#6b7280', label: 'O. Berechnung' },
+  teilberechnet: { color: '#f59e0b', label: 'Teilberechnet' },
+  berechnet: { color: '#22c55e', label: 'Berechnet' },
   storniert: { color: '#ef4444', label: 'Storniert' },
 }
 
@@ -54,27 +58,41 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-type StatusFilter = 'offen' | 'bestellt' | 'versendet' | 'zugestellt'
+type OrderFilter = 'alle' | 'offen' | 'teilbestellt' | 'bestellt'
+type InvoiceFilter = 'alle' | 'ohne_berechnung' | 'berechnet'
 
-const FILTER_TABS: { key: StatusFilter; label: string }[] = [
+const ORDER_FILTER_TABS: { key: OrderFilter; label: string }[] = [
+  { key: 'alle', label: 'Alle' },
   { key: 'offen', label: 'Offen' },
+  { key: 'teilbestellt', label: 'Teilbest.' },
   { key: 'bestellt', label: 'Bestellt' },
-  { key: 'versendet', label: 'Versendet' },
-  { key: 'zugestellt', label: 'Zugestellt' },
 ]
 
-const FILTER_MAP: Record<StatusFilter, string[]> = {
-  offen: ['offen', 'new', 'in_bearbeitung'],
+const INVOICE_FILTER_TABS: { key: InvoiceFilter; label: string }[] = [
+  { key: 'alle', label: 'Alle' },
+  { key: 'ohne_berechnung', label: 'O. Berechnung' },
+  { key: 'berechnet', label: 'Berechnet' },
+]
+
+const ORDER_FILTER_MAP: Record<OrderFilter, string[]> = {
+  alle: ['offen', 'new', 'teilbestellt', 'bestellt', 'storniert'],
+  offen: ['offen', 'new'],
+  teilbestellt: ['teilbestellt'],
   bestellt: ['bestellt'],
-  versendet: ['versendet'],
-  zugestellt: ['zugestellt', 'abgeschlossen'],
+}
+
+const INVOICE_FILTER_MAP: Record<InvoiceFilter, string[]> = {
+  alle: ['ohne_berechnung', 'teilberechnet', 'berechnet', 'storniert'],
+  ohne_berechnung: ['ohne_berechnung'],
+  berechnet: ['berechnet', 'teilberechnet'],
 }
 
 export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
   const styles = createStyles()
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [activeFilter, setActiveFilter] = useState<StatusFilter>('offen')
+  const [orderFilter, setOrderFilter] = useState<OrderFilter>('offen')
+  const [invoiceFilter, setInvoiceFilter] = useState<InvoiceFilter>('alle')
 
   const queryClient = useQueryClient()
   const [contextOrder, setContextOrder] = useState<Auftrag | null>(null)
@@ -107,7 +125,10 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
   const allAuftraege = data?.data || []
   const auftraege = allAuftraege.filter((a: any) => {
     const status = (a.computed_status || a.status || 'offen').toLowerCase()
-    return FILTER_MAP[activeFilter].includes(status)
+    const invStatus = (a.invoice_status || 'ohne_berechnung').toLowerCase()
+    const matchesOrder = ORDER_FILTER_MAP[orderFilter].includes(status)
+    const matchesInvoice = INVOICE_FILTER_MAP[invoiceFilter].includes(invStatus)
+    return matchesOrder && matchesInvoice
   })
 
   const openEkListe = async (order: Auftrag) => {
@@ -315,6 +336,13 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
               <Text style={styles.cardDetailText}>{Math.round(Number((item as any).total_quantity) || 0)} Stk.</Text>
               <Text style={[styles.cardDetailText, styles.amount]}>{formatCurrency(item.total_gross)}</Text>
               <StatusBadge status={(item as any).computed_status || item.status} />
+              {(item as any).invoice_status && (item as any).invoice_status !== 'ohne_berechnung' && (
+                <View style={[styles.badge, { backgroundColor: '#22c55e25', borderColor: '#22c55e50' }]}>
+                  <Text style={[styles.badgeText, { color: '#22c55e' }]}>
+                    {INVOICE_STATUS_CONFIG[(item as any).invoice_status]?.label || (item as any).invoice_status}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -324,16 +352,29 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
 
   return (
     <View style={styles.container}>
-      {/* Status Filter Tabs */}
+      {/* Bestell-Status Filter */}
       <View style={styles.tabs}>
-        {FILTER_TABS.map(tab => (
+        {ORDER_FILTER_TABS.map(tab => (
           <TouchableOpacity
             key={tab.key}
-            style={[styles.tab, activeFilter === tab.key && styles.tabActive]}
-            onPress={() => setActiveFilter(tab.key)}
+            style={[styles.tab, orderFilter === tab.key && styles.tabActive]}
+            onPress={() => setOrderFilter(tab.key)}
             activeOpacity={0.7}
           >
-            <Text style={[styles.tabText, activeFilter === tab.key && styles.tabTextActive]}>{tab.label}</Text>
+            <Text style={[styles.tabText, orderFilter === tab.key && styles.tabTextActive]}>{tab.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      {/* Rechnungs-Status Filter */}
+      <View style={styles.tabsSecondary}>
+        {INVOICE_FILTER_TABS.map(tab => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[styles.tab, invoiceFilter === tab.key && styles.tabSecondaryActive]}
+            onPress={() => setInvoiceFilter(tab.key)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.tabText, invoiceFilter === tab.key && styles.tabTextSecondaryActive]}>{tab.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -629,6 +670,16 @@ function createStyles() { return StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  tabsSecondary: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.md,
+    marginTop: 4,
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   tab: {
     flex: 1,
     paddingVertical: 8,
@@ -638,12 +689,19 @@ function createStyles() { return StyleSheet.create({
   tabActive: {
     backgroundColor: colors.primary,
   },
+  tabSecondaryActive: {
+    backgroundColor: '#22c55e',
+  },
   tabText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
     color: colors.textSecondary,
   },
   tabTextActive: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  tabTextSecondaryActive: {
     color: '#fff',
     fontWeight: '600',
   },
