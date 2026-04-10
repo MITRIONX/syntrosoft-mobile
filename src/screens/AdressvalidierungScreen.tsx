@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
   ActivityIndicator, TextInput, Modal, ScrollView, RefreshControl, Linking, Alert,
@@ -66,9 +66,10 @@ interface KorrekturModalProps {
   item: AddressValidation
   onClose: () => void
   onUpdated: () => void
+  autoGoogle?: boolean
 }
 
-function KorrekturModal({ item, onClose, onUpdated }: KorrekturModalProps) {
+function KorrekturModal({ item, onClose, onUpdated, autoGoogle }: KorrekturModalProps) {
   const styles = createStyles()
   const [street, setStreet] = useState(item.suggestion?.street ?? item.shippingStreet)
   const [postalCode, setPostalCode] = useState(item.suggestion?.postalCode ?? item.shippingPostalCode)
@@ -77,6 +78,10 @@ function KorrekturModal({ item, onClose, onUpdated }: KorrekturModalProps) {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [markingValid, setMarkingValid] = useState(false)
+
+  useEffect(() => {
+    if (autoGoogle) handleGoogleCheck()
+  }, [])
 
   const handleGoogleCheck = async () => {
     setLoading(true)
@@ -259,6 +264,7 @@ export function AdressvalidierungScreen() {
   const [activeFilter, setActiveFilter] = useState<FilterTab>('alle')
   const [search, setSearch] = useState('')
   const [korrekturItem, setKorrekturItem] = useState<AddressValidation | null>(null)
+  const [autoGoogleCheck, setAutoGoogleCheck] = useState(false)
   const [validatingAll, setValidatingAll] = useState(false)
   const [validatingSingle, setValidatingSingle] = useState<number | null>(null)
 
@@ -364,13 +370,22 @@ export function AdressvalidierungScreen() {
             </TouchableOpacity>
 
             {(item.validationStatus === 'SUSPECT' || item.validationStatus === 'INVALID') && (
-              <TouchableOpacity
-                style={[styles.cardActionBtn, styles.cardActionBtnSecondary]}
-                onPress={() => setKorrekturItem(item)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.cardActionBtnText, { color: colors.warning }]}>Korrigieren</Text>
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity
+                  style={[styles.cardActionBtn, styles.cardActionBtnSecondary]}
+                  onPress={() => setKorrekturItem(item)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.cardActionBtnText, { color: colors.warning }]}>Korrigieren</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.cardActionBtn, styles.cardActionBtnSecondary]}
+                  onPress={() => { setAutoGoogleCheck(true); setKorrekturItem(item) }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.cardActionBtnText, { color: '#a855f7' }]}>Google</Text>
+                </TouchableOpacity>
+              </>
             )}
 
             <TouchableOpacity
@@ -484,8 +499,9 @@ export function AdressvalidierungScreen() {
       {korrekturItem && (
         <KorrekturModal
           item={korrekturItem}
-          onClose={() => setKorrekturItem(null)}
+          onClose={() => { setKorrekturItem(null); setAutoGoogleCheck(false) }}
           onUpdated={() => queryClient.invalidateQueries({ queryKey: ['adressvalidierung'] })}
+          autoGoogle={autoGoogleCheck}
         />
       )}
     </View>
