@@ -369,7 +369,19 @@ export function AuftragDetailScreen({ auftrag, onBack }: AuftragDetailScreenProp
     enabled: !!data?.data,
   })
 
+  const { data: fulfillData } = useQuery({
+    queryKey: ['auftrag-fulfill-items', auftrag.id],
+    queryFn: () => api.getOrderItemsForFulfillment(auftrag.id),
+    enabled: !!data?.data,
+  })
+
   const related: AuftragRelated | undefined = relatedData?.data
+  const fulfillItemsMap = new Map<string, any>()
+  if (fulfillData?.items) {
+    for (const fi of fulfillData.items) {
+      if (fi.article_number) fulfillItemsMap.set(fi.article_number, fi)
+    }
+  }
 
   const detail: AuftragDetail | undefined = data?.data
 
@@ -502,25 +514,48 @@ export function AuftragDetailScreen({ auftrag, onBack }: AuftragDetailScreenProp
               <Package size={18} color={colors.primary} />
               <Text style={styles.cardTitle}>Positionen ({detail.items.length})</Text>
             </View>
-            {detail.items.map((item: AuftragItem, index: number) => (
-              <View key={item.id} style={[styles.positionRow, index > 0 && styles.positionRowBorder]}>
-                <View style={styles.positionLeft}>
-                  <Text style={styles.positionNumber}>{item.position_number}.</Text>
+            {detail.items.map((item: AuftragItem, index: number) => {
+              const fi = item.article_number ? fulfillItemsMap.get(item.article_number) : null
+              const badges: { label: string; color: string }[] = []
+              if (fi) {
+                const eigenQty = Number(fi.fulfilled_eigenversand || 0)
+                const streckeQty = Number(fi.fulfilled_strecke || 0) + Number(fi.fulfilled_dropshipping_of || 0)
+                const ekQty = Number(fi.auf_einkaufsliste || 0)
+                const ekBestellt = Number(fi.fulfilled_einkauf || 0)
+                if (eigenQty > 0) badges.push({ label: `Versendet ${Math.round(eigenQty)}`, color: '#a855f7' })
+                if (streckeQty > 0) badges.push({ label: `Strecke ${Math.round(streckeQty)}`, color: '#8b5cf6' })
+                if (ekBestellt > 0) badges.push({ label: `Bestellt ${Math.round(ekBestellt)}`, color: '#f59e0b' })
+                if (ekQty > 0) badges.push({ label: `EK-Liste ${Math.round(ekQty)}`, color: '#f97316' })
+              }
+              return (
+                <View key={item.id} style={[styles.positionRow, index > 0 && styles.positionRowBorder]}>
+                  <View style={styles.positionLeft}>
+                    <Text style={styles.positionNumber}>{item.position_number}.</Text>
+                  </View>
+                  <View style={styles.positionInfo}>
+                    {item.article_number && (
+                      <Text style={styles.articleNumber}>{item.article_number}</Text>
+                    )}
+                    <Text style={styles.articleName} numberOfLines={2}>
+                      {item.article_name || 'Unbekannter Artikel'}
+                    </Text>
+                    <Text style={styles.positionCalc}>
+                      {item.quantity} {item.unit} × {formatCurrency(item.unit_price_gross)}
+                    </Text>
+                    {badges.length > 0 && (
+                      <View style={styles.positionBadges}>
+                        {badges.map((b, i) => (
+                          <View key={i} style={[styles.positionBadge, { backgroundColor: b.color + '20' }]}>
+                            <Text style={[styles.positionBadgeText, { color: b.color }]}>{b.label}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.positionTotal}>{formatCurrency(item.total_gross)}</Text>
                 </View>
-                <View style={styles.positionInfo}>
-                  {item.article_number && (
-                    <Text style={styles.articleNumber}>{item.article_number}</Text>
-                  )}
-                  <Text style={styles.articleName} numberOfLines={2}>
-                    {item.article_name || 'Unbekannter Artikel'}
-                  </Text>
-                  <Text style={styles.positionCalc}>
-                    {item.quantity} {item.unit} × {formatCurrency(item.unit_price_gross)}
-                  </Text>
-                </View>
-                <Text style={styles.positionTotal}>{formatCurrency(item.total_gross)}</Text>
-              </View>
-            ))}
+              )
+            })}
           </View>
 
           {/* Fulfillment */}
@@ -762,6 +797,21 @@ function createStyles() { return StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
     marginTop: 3,
+  },
+  positionBadges: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginTop: 5,
+  },
+  positionBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  positionBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
   },
   positionTotal: {
     fontSize: 14,
