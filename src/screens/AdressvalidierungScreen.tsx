@@ -124,8 +124,11 @@ function KorrekturModal({ item, onClose, onUpdated, autoGoogle }: KorrekturModal
     }
   }
 
+  const [revalidationResult, setRevalidationResult] = useState<string | null>(null)
+
   const handleSave = async () => {
     setSaving(true)
+    setRevalidationResult(null)
     try {
       const isJtl = !!(item as any).jtlKAuftrag
       await api.updateOrderAddress(item.orderId, {
@@ -138,10 +141,16 @@ function KorrekturModal({ item, onClose, onUpdated, autoGoogle }: KorrekturModal
         shipping_city: city,
         ...(isJtl ? { jtlMode: true } : {}),
       } as any)
-      // re-validate
-      await api.validateOrderAddresses([item.orderId])
+      // DHL Re-Validierung
+      const result = await api.validateOrderAddresses([item.orderId])
+      const updated = result.data?.find((d: any) => d.orderId === item.orderId)
+      const newStatus = updated?.validationStatus || 'PENDING'
+      setRevalidationResult(newStatus)
       onUpdated()
-      onClose()
+      if (newStatus === 'VALID') {
+        // Automatisch schliessen nach 2s bei Erfolg
+        setTimeout(() => onClose(), 2000)
+      }
     } catch (e) {
       Alert.alert('Fehler', String((e as Error)?.message || 'Speichern fehlgeschlagen'))
     } finally {
@@ -307,6 +316,23 @@ function KorrekturModal({ item, onClose, onUpdated, autoGoogle }: KorrekturModal
                 }
               </TouchableOpacity>
             </View>
+
+            {/* DHL Re-Validierungs-Ergebnis */}
+            {revalidationResult && (
+              <View style={[styles.modalSection, {
+                backgroundColor: revalidationResult === 'VALID' ? '#22c55e15' : revalidationResult === 'SUSPECT' ? '#f59e0b15' : '#ef444415',
+                borderColor: revalidationResult === 'VALID' ? '#22c55e40' : revalidationResult === 'SUSPECT' ? '#f59e0b40' : '#ef444440',
+              }]}>
+                <Text style={[styles.modalSectionTitle, {
+                  color: revalidationResult === 'VALID' ? '#22c55e' : revalidationResult === 'SUSPECT' ? '#f59e0b' : '#ef4444',
+                }]}>
+                  {revalidationResult === 'VALID' ? 'DHL: Adresse gueltig' : revalidationResult === 'SUSPECT' ? 'DHL: Adresse leitcodierbar (Hinweise)' : 'DHL: Adresse ungueltig'}
+                </Text>
+                {revalidationResult === 'VALID' && (
+                  <Text style={[styles.modalSectionText, { color: '#22c55e' }]}>Wird automatisch geschlossen...</Text>
+                )}
+              </View>
+            )}
           </ScrollView>
         </View>
       </View>
