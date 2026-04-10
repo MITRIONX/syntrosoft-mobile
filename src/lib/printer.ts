@@ -74,6 +74,30 @@ export async function getPrinterForContext(context: string): Promise<NetworkPrin
   return match?.printer || null
 }
 
+// --- Gespeicherte Drucker ---
+
+const SAVED_PRINTERS_KEY = '@syntrosoft_saved_printers'
+
+export async function loadSavedPrinters(): Promise<NetworkPrinter[]> {
+  const json = await AsyncStorage.getItem(SAVED_PRINTERS_KEY)
+  return json ? JSON.parse(json) : []
+}
+
+export async function addSavedPrinter(printer: NetworkPrinter): Promise<void> {
+  const printers = await loadSavedPrinters()
+  const existing = printers.find(p => p.host === printer.host && p.port === printer.port)
+  if (!existing) {
+    printers.push(printer)
+    await AsyncStorage.setItem(SAVED_PRINTERS_KEY, JSON.stringify(printers))
+  }
+}
+
+export async function removeSavedPrinter(host: string, port: number): Promise<void> {
+  const printers = await loadSavedPrinters()
+  const filtered = printers.filter(p => !(p.host === host && p.port === port))
+  await AsyncStorage.setItem(SAVED_PRINTERS_KEY, JSON.stringify(filtered))
+}
+
 // --- IPP Print ---
 
 export async function printPdf(printer: NetworkPrinter, pdfBase64: string): Promise<{ success: boolean; error?: string }> {
@@ -86,27 +110,20 @@ export async function printPdf(printer: NetworkPrinter, pdfBase64: string): Prom
 
     const ippUrl = `http://${printer.host}:${printer.port}/ipp/print`
 
-    // Build minimal IPP 1.1 Print-Job request
     const encoder = new IppEncoder()
-    encoder.writeInt8(1) // version-major
-    encoder.writeInt8(1) // version-minor
-    encoder.writeInt16(0x0002) // operation: Print-Job
-    encoder.writeInt32(1) // request-id
-
-    // Operation attributes
-    encoder.writeInt8(0x01) // operation-attributes-tag
+    encoder.writeInt8(1)
+    encoder.writeInt8(1)
+    encoder.writeInt16(0x0002) // Print-Job
+    encoder.writeInt32(1)
+    encoder.writeInt8(0x01)
     encoder.writeAttribute(0x47, 'attributes-charset', 'utf-8')
     encoder.writeAttribute(0x48, 'attributes-natural-language', 'de')
     encoder.writeAttribute(0x45, 'printer-uri', ippUrl)
     encoder.writeAttribute(0x49, 'document-format', 'application/pdf')
-
-    // Job attributes
-    encoder.writeInt8(0x02) // job-attributes-tag
+    encoder.writeInt8(0x02)
     encoder.writeAttribute(0x42, 'job-name', 'SyntroSoft Print')
+    encoder.writeInt8(0x03)
 
-    encoder.writeInt8(0x03) // end-of-attributes-tag
-
-    // Append PDF data
     const ippHeader = encoder.toBuffer()
     const fullBody = new Uint8Array(ippHeader.length + pdfBytes.length)
     fullBody.set(ippHeader)
@@ -127,7 +144,6 @@ export async function printPdf(printer: NetworkPrinter, pdfBase64: string): Prom
   }
 }
 
-// Minimal IPP binary encoder
 class IppEncoder {
   private parts: number[] = []
 
