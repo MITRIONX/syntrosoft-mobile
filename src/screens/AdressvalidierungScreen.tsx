@@ -161,7 +161,10 @@ function KorrekturModal({ item, onClose, onUpdated, autoGoogle }: KorrekturModal
             {/* Original */}
             <View style={[styles.modalSection, styles.sectionOriginal]}>
               <Text style={styles.modalSectionTitle}>Original</Text>
+              {!!(item as any).shippingCompany && <Text style={styles.modalSectionText}>{(item as any).shippingCompany}</Text>}
+              <Text style={styles.modalSectionText}>{[(item as any).shippingFirstName, (item as any).shippingLastName].filter(Boolean).join(' ')}</Text>
               <Text style={styles.modalSectionText}>{item.shippingStreet}</Text>
+              {!!(item as any).shippingAddressLine2 && <Text style={styles.modalSectionText}>{(item as any).shippingAddressLine2}</Text>}
               <Text style={styles.modalSectionText}>{item.shippingPostalCode} {item.shippingCity}</Text>
               <Text style={styles.modalSectionText}>{item.shippingCountry}</Text>
             </View>
@@ -392,7 +395,8 @@ export function AdressvalidierungScreen() {
         <View style={styles.addressRow}>
           <MapPin size={13} color={colors.textMuted} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.addressText} numberOfLines={1}>{item.shippingStreet}</Text>
+            {!!(item as any).shippingCompany && <Text style={styles.addressText} numberOfLines={1}>{(item as any).shippingCompany}</Text>}
+            <Text style={styles.addressText} numberOfLines={1}>{item.shippingStreet}{(item as any).shippingAddressLine2 ? `, ${(item as any).shippingAddressLine2}` : ''}</Text>
             <Text style={styles.addressText} numberOfLines={1}>{item.shippingPostalCode} {item.shippingCity}</Text>
           </View>
         </View>
