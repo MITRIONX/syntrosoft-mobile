@@ -37,6 +37,22 @@ async function mobilePut<T>(path: string, body: Record<string, any>): Promise<T>
   return res.json()
 }
 
+async function mobilePost<T>(path: string, body: Record<string, any>): Promise<T> {
+  const conn = await getConnectionInfo()
+  if (!conn) throw new Error('Nicht verbunden')
+
+  const res = await fetch(`${conn.serverUrl}/api/mobile${path}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${conn.deviceToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(`Fehler: ${res.status}`)
+  return res.json()
+}
+
 export interface Kunde {
   id: number
   customer_number: string
@@ -283,6 +299,46 @@ export const api = {
     })
     if (!res.ok) throw new Error(`Fehler: ${res.status}`)
     return res.json()
+  },
+
+  // --- Shipping Label APIs ---
+
+  async getShippingMethods(): Promise<{ success: boolean; data: { id: number; name: string; carrier: string; default_cost: number; is_active: boolean }[] }> {
+    return mobileFetch('/versand/shipping/methods')
+  },
+
+  async getSenderAddress(carrier: string): Promise<{ success: boolean; data: any; source: string }> {
+    return mobileFetch(`/versand/shipping/sender-address/${carrier}`)
+  },
+
+  async createShippingLabel(body: {
+    orderId: number; recipientName: string; recipientCompany?: string;
+    recipientStreet: string; recipientPostalCode: string; recipientCity: string;
+    recipientCountry?: string; recipientEmail?: string; recipientPhone?: string;
+    weightKg?: number; product?: string; carrier: string;
+    packageNumber?: number; totalPackages?: number;
+  }): Promise<{ success: boolean; label?: any; error?: string }> {
+    return mobilePost(`/versand/shipping/order/${body.orderId}/labels`, body)
+  },
+
+  async getLabelPdf(labelId: number): Promise<{ success: boolean; pdf: string }> {
+    return mobileFetch(`/versand/shipping/labels/${labelId}/pdf`)
+  },
+
+  // --- Druckvorlagen APIs ---
+
+  async getDruckvorlagen(type?: string): Promise<{ success: boolean; data: { id: number; name: string; document_type: string; is_default: boolean }[] }> {
+    const params: Record<string, string> = {}
+    if (type) params.type = type
+    return mobileFetch('/versand/druckvorlagen', params)
+  },
+
+  async renderDruckvorlage(body: { templateId: number; orderId?: number; deliveryNoteId?: number; paperWidth?: number }): Promise<{ success: boolean; pdf: string }> {
+    return mobilePost('/versand/druckvorlagen/render', body)
+  },
+
+  async getDeliveryNotes(orderId: number): Promise<{ success: boolean; data: any[] }> {
+    return mobileFetch(`/versand/delivery-notes/order/${orderId}`)
   },
 }
 
