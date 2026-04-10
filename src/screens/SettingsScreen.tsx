@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Switch, Modal, ActivityIndicator, ScrollView } from 'react-native'
-import { LogOut, Smartphone, Server, User, Sun, Moon, Printer } from 'lucide-react-native'
-import { ConnectionInfo, clearConnectionInfo } from '../lib/auth'
+import { LogOut, Smartphone, Server, User, Sun, Moon, Printer, Plus, Check, Trash2 } from 'lucide-react-native'
+import { ConnectionInfo, clearConnectionInfo, getAllAccounts, getActiveAccountIndex, setActiveAccount, removeAccount } from '../lib/auth'
 import { useTheme } from '../theme'
 import { spacing } from '../theme'
 import { discoverPrinters, loadAssignments, saveAssignment, removeAssignment, NetworkPrinter, PrinterAssignment } from '../lib/printer'
@@ -9,6 +9,8 @@ import { discoverPrinters, loadAssignments, saveAssignment, removeAssignment, Ne
 interface SettingsScreenProps {
   connection: ConnectionInfo
   onDisconnect: () => void
+  onSwitchAccount?: (info: ConnectionInfo) => void
+  onAddAccount?: () => void
 }
 
 const PRINTER_CONTEXTS = [
@@ -18,16 +20,63 @@ const PRINTER_CONTEXTS = [
   { key: 'carrier:dpd', label: 'DPD Labels' },
 ]
 
-export function SettingsScreen({ connection, onDisconnect }: SettingsScreenProps) {
+export function SettingsScreen({ connection, onDisconnect, onSwitchAccount, onAddAccount }: SettingsScreenProps) {
   const { mode, colors, toggle } = useTheme()
   const isDark = mode === 'dark'
 
+  const [accounts, setAccounts] = useState<ConnectionInfo[]>([])
+  const [activeIdx, setActiveIdx] = useState(0)
   const [printerAssignments, setPrinterAssignments] = useState<PrinterAssignment[]>([])
   const [discoveredPrinters, setDiscoveredPrinters] = useState<NetworkPrinter[]>([])
   const [scanning, setScanning] = useState(false)
   const [assignContext, setAssignContext] = useState<string | null>(null)
 
-  useEffect(() => { loadAssignments().then(setPrinterAssignments) }, [])
+  useEffect(() => {
+    loadAssignments().then(setPrinterAssignments)
+    loadAccounts()
+  }, [])
+
+  const loadAccounts = async () => {
+    const all = await getAllAccounts()
+    const idx = await getActiveAccountIndex()
+    setAccounts(all)
+    setActiveIdx(idx)
+  }
+
+  const handleSwitchAccount = async (idx: number) => {
+    if (idx === activeIdx) return
+    const info = await setActiveAccount(idx)
+    if (info && onSwitchAccount) {
+      setActiveIdx(idx)
+      onSwitchAccount(info)
+    }
+  }
+
+  const handleRemoveAccount = (idx: number) => {
+    const acc = accounts[idx]
+    Alert.alert(
+      'Account entfernen',
+      `"${acc.tenantName}" entfernen?`,
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Entfernen', style: 'destructive',
+          onPress: async () => {
+            await removeAccount(idx)
+            if (accounts.length <= 1) {
+              onDisconnect()
+            } else {
+              loadAccounts()
+              if (idx === activeIdx) {
+                const info = await setActiveAccount(0)
+                if (info && onSwitchAccount) onSwitchAccount(info)
+              }
+            }
+          },
+        },
+      ]
+    )
+  }
 
   const handleDisconnect = () => {
     Alert.alert(
@@ -94,6 +143,42 @@ export function SettingsScreen({ connection, onDisconnect }: SettingsScreenProps
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
+      {/* Mandanten / Accounts */}
+      {accounts.length > 1 && (
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Mandanten</Text>
+          {accounts.map((acc, idx) => (
+            <TouchableOpacity
+              key={idx}
+              style={[styles.row, { borderBottomColor: colors.border, borderBottomWidth: idx === accounts.length - 1 ? 0 : 1 }]}
+              onPress={() => handleSwitchAccount(idx)}
+              onLongPress={() => handleRemoveAccount(idx)}
+            >
+              {idx === activeIdx ? (
+                <Check size={16} color={colors.success} />
+              ) : (
+                <Server size={16} color={colors.textMuted} />
+              )}
+              <View style={styles.rowContent}>
+                <Text style={[styles.rowValue, { color: idx === activeIdx ? colors.text : colors.textSecondary, fontWeight: idx === activeIdx ? '600' : '400' }]}>
+                  {acc.tenantName}
+                </Text>
+                <Text style={[styles.rowLabel, { color: colors.textMuted }]}>{acc.userName}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+          {onAddAccount && (
+            <TouchableOpacity
+              style={[styles.row, { borderBottomWidth: 0 }]}
+              onPress={onAddAccount}
+            >
+              <Plus size={16} color={colors.primary} />
+              <Text style={[styles.rowValue, { color: colors.primary }]}>Mandant hinzufuegen</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Verbindung</Text>
 
@@ -177,6 +262,13 @@ export function SettingsScreen({ connection, onDisconnect }: SettingsScreenProps
           )
         })}
       </View>
+
+      {onAddAccount && (
+        <TouchableOpacity style={[styles.disconnectButton, { backgroundColor: colors.surface, borderColor: colors.primary + '30', marginBottom: spacing.sm }]} onPress={onAddAccount}>
+          <Plus size={18} color={colors.primary} />
+          <Text style={[styles.disconnectText, { color: colors.primary }]}>Mandant hinzufuegen</Text>
+        </TouchableOpacity>
+      )}
 
       <TouchableOpacity style={[styles.disconnectButton, { backgroundColor: colors.surface, borderColor: colors.danger + '30' }]} onPress={handleDisconnect}>
         <LogOut size={18} color={colors.danger} />

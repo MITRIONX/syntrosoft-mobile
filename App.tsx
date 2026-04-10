@@ -279,6 +279,8 @@ function BestellungenPage({ navigation }: any) {
 // Connection wird als globale Variable gehalten (von App gesetzt)
 let _connection: ConnectionInfo | null = null
 let _onDisconnect: (() => void) | null = null
+let _onSwitchAccount: ((info: ConnectionInfo) => void) | null = null
+let _onAddAccount: (() => void) | null = null
 
 function SettingsPage({ navigation }: any) {
   const styles = createStyles()
@@ -286,7 +288,12 @@ function SettingsPage({ navigation }: any) {
     <View style={styles.screenContainer}>
       <ScreenHeader title="Einstellungen" navigation={navigation} />
       {_connection && (
-        <SettingsScreen connection={_connection} onDisconnect={() => _onDisconnect?.()} />
+        <SettingsScreen
+          connection={_connection}
+          onDisconnect={() => _onDisconnect?.()}
+          onSwitchAccount={(info) => _onSwitchAccount?.(info)}
+          onAddAccount={() => _onAddAccount?.()}
+        />
       )}
     </View>
   )
@@ -296,9 +303,15 @@ export default function App() {
   const [connection, setConnection] = useState<ConnectionInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [themeMode, setThemeMode] = useState<ThemeMode>('dark')
+  const [addingAccount, setAddingAccount] = useState(false)
 
   _connection = connection
   _onDisconnect = () => setConnection(null)
+  _onSwitchAccount = (info) => {
+    setConnection(info)
+    queryClient.clear()
+  }
+  _onAddAccount = () => setAddingAccount(true)
 
   const toggleTheme = () => {
     const newMode = themeMode === 'dark' ? 'light' : 'dark'
@@ -328,7 +341,7 @@ export default function App() {
   const themeColors = isDark ? darkColors : lightColors
   const themeCtx = { mode: themeMode, colors: themeColors, toggle: toggleTheme }
 
-  if (!connection) {
+  if (!connection || addingAccount) {
     return (
       <ThemeContext.Provider value={themeCtx}>
         <SafeAreaProvider>
@@ -336,7 +349,9 @@ export default function App() {
           <ScanScreen onPaired={async () => {
             const info = await getConnectionInfo()
             setConnection(info)
-          }} />
+            setAddingAccount(false)
+            queryClient.clear()
+          }} onCancel={addingAccount ? () => setAddingAccount(false) : undefined} />
         </SafeAreaProvider>
       </ThemeContext.Provider>
     )

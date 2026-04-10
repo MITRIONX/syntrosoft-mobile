@@ -1,14 +1,16 @@
 import { useState, useRef } from 'react'
-import { View, Text, StyleSheet, Alert, ActivityIndicator } from 'react-native'
+import { View, Text, StyleSheet, Alert, ActivityIndicator, TouchableOpacity } from 'react-native'
 import { CameraView, useCameraPermissions } from 'expo-camera'
+import { ArrowLeft } from 'lucide-react-native'
 import { pairDevice } from '../lib/auth'
 import { colors } from '../theme'
 
 interface ScanScreenProps {
   onPaired: () => void
+  onCancel?: () => void
 }
 
-export function ScanScreen({ onPaired }: ScanScreenProps) {
+export function ScanScreen({ onPaired, onCancel }: ScanScreenProps) {
   const styles = createStyles()
   const [permission, requestPermission] = useCameraPermissions()
   const [pairing, setPairing] = useState(false)
@@ -57,7 +59,13 @@ export function ScanScreen({ onPaired }: ScanScreenProps) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>SyntroSoft</Text>
+        {onCancel && (
+          <TouchableOpacity onPress={onCancel} style={styles.cancelBtn}>
+            <ArrowLeft size={20} color={colors.text} />
+            <Text style={styles.cancelText}>Zurueck</Text>
+          </TouchableOpacity>
+        )}
+        <Text style={styles.title}>{onCancel ? 'Mandant hinzufuegen' : 'SyntroSoft'}</Text>
         <Text style={styles.subtitle}>QR-Code scannen um zu verbinden</Text>
       </View>
 
@@ -101,6 +109,16 @@ function createStyles() { return StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 20,
     alignItems: 'center',
+  },
+  cancelBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 16,
+  },
+  cancelText: {
+    color: colors.text,
+    fontSize: 14,
   },
   title: {
     fontSize: 28,
