@@ -100,7 +100,7 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
 
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ['auftraege', debouncedSearch],
-    queryFn: () => api.searchAuftraege(debouncedSearch, 100),
+    queryFn: () => api.searchAuftraege(debouncedSearch, 500),
     staleTime: 30000,
   })
 

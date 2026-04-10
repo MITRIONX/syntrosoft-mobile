@@ -76,7 +76,7 @@ export const api = {
     return mobileFetch(`/kunden/${id}/tickets`)
   },
 
-  async searchAuftraege(search: string, limit = 20, offset = 0): Promise<{ success: boolean; data: Auftrag[]; total: number }> {
+  async searchAuftraege(search: string, limit = 500, offset = 0): Promise<{ success: boolean; data: Auftrag[]; total: number }> {
     return mobileFetch('/auftraege', { search, limit: String(limit), offset: String(offset) })
   },
 
