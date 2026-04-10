@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { ArrowLeft } from 'lucide-react-native'
+import { ArrowLeft, X } from 'lucide-react-native'
 import { api, Auftrag, AuftragDetail, OrderItem } from '../lib/api'
 import { colors, spacing } from '../theme'
 import { Step1Positionen } from './wizard/Step1Positionen'
@@ -82,17 +82,22 @@ export function VersandWizard({ auftrag, onClose, onComplete }: Props) {
           <Text style={styles.headerTitle}>Auftrag {auftrag.order_number}</Text>
           <Text style={styles.headerStep}>{STEP_LABELS[step]}</Text>
         </View>
-        <View style={styles.dots}>
-          {steps.map((s, i) => (
-            <View
-              key={s}
-              style={[
-                styles.dot,
-                i === currentIndex && styles.dotActive,
-                i < currentIndex && styles.dotDone,
-              ]}
-            />
-          ))}
+        <View style={styles.headerRight}>
+          <View style={styles.dots}>
+            {steps.map((s, i) => (
+              <View
+                key={s}
+                style={[
+                  styles.dot,
+                  i === currentIndex && styles.dotActive,
+                  i < currentIndex && styles.dotDone,
+                ]}
+              />
+            ))}
+          </View>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <X size={20} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -159,6 +164,14 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 12,
     marginTop: 1,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  closeButton: {
+    padding: 4,
   },
   dots: {
     flexDirection: 'row',
