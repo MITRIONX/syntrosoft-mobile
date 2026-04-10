@@ -71,11 +71,12 @@ interface KorrekturModalProps {
 
 function KorrekturModal({ item, onClose, onUpdated, autoGoogle }: KorrekturModalProps) {
   const styles = createStyles()
-  const [company, setCompany] = useState((item as any).shippingCompany || '')
-  const [firstName, setFirstName] = useState((item as any).shippingFirstName || '')
-  const [lastName, setLastName] = useState((item as any).shippingLastName || '')
+  const a = item as any
+  const [company, setCompany] = useState(a.shippingCompany || a.firma || '')
+  const [firstName, setFirstName] = useState(a.shippingFirstName || a.vorname || '')
+  const [lastName, setLastName] = useState(a.shippingLastName || a.nachname || '')
   const [street, setStreet] = useState(item.suggestion?.street ?? item.shippingStreet)
-  const [addressLine2, setAddressLine2] = useState((item as any).shippingAddressLine2 || '')
+  const [addressLine2, setAddressLine2] = useState(a.shippingAddressLine2 || a.adresszusatz || '')
   const [postalCode, setPostalCode] = useState(item.suggestion?.postalCode ?? item.shippingPostalCode)
   const [city, setCity] = useState(item.suggestion?.city ?? item.shippingCity)
   const [googleResult, setGoogleResult] = useState<{ formattedAddress?: string; structured?: { street: string; postalCode: string; city: string } } | null>(null)
@@ -126,6 +127,7 @@ function KorrekturModal({ item, onClose, onUpdated, autoGoogle }: KorrekturModal
   const handleSave = async () => {
     setSaving(true)
     try {
+      const isJtl = !!(item as any).jtlKAuftrag
       await api.updateOrderAddress(item.orderId, {
         shipping_company: company,
         shipping_first_name: firstName,
@@ -134,6 +136,7 @@ function KorrekturModal({ item, onClose, onUpdated, autoGoogle }: KorrekturModal
         shipping_address_line2: addressLine2,
         shipping_postal_code: postalCode,
         shipping_city: city,
+        ...(isJtl ? { jtlMode: true } : {}),
       } as any)
       // re-validate
       await api.validateOrderAddresses([item.orderId])
@@ -161,10 +164,10 @@ function KorrekturModal({ item, onClose, onUpdated, autoGoogle }: KorrekturModal
             {/* Original */}
             <View style={[styles.modalSection, styles.sectionOriginal]}>
               <Text style={styles.modalSectionTitle}>Original</Text>
-              {!!(item as any).shippingCompany && <Text style={styles.modalSectionText}>{(item as any).shippingCompany}</Text>}
-              <Text style={styles.modalSectionText}>{[(item as any).shippingFirstName, (item as any).shippingLastName].filter(Boolean).join(' ')}</Text>
+              {!!((item as any).shippingCompany || (item as any).firma) && <Text style={styles.modalSectionText}>{(item as any).shippingCompany || (item as any).firma}</Text>}
+              <Text style={styles.modalSectionText}>{[(item as any).shippingFirstName || (item as any).vorname, (item as any).shippingLastName || (item as any).nachname].filter(Boolean).join(' ')}</Text>
               <Text style={styles.modalSectionText}>{item.shippingStreet}</Text>
-              {!!(item as any).shippingAddressLine2 && <Text style={styles.modalSectionText}>{(item as any).shippingAddressLine2}</Text>}
+              {!!((item as any).shippingAddressLine2 || (item as any).adresszusatz) && <Text style={styles.modalSectionText}>{(item as any).shippingAddressLine2 || (item as any).adresszusatz}</Text>}
               <Text style={styles.modalSectionText}>{item.shippingPostalCode} {item.shippingCity}</Text>
               <Text style={styles.modalSectionText}>{item.shippingCountry}</Text>
             </View>
@@ -395,8 +398,8 @@ export function AdressvalidierungScreen() {
         <View style={styles.addressRow}>
           <MapPin size={13} color={colors.textMuted} />
           <View style={{ flex: 1 }}>
-            {!!(item as any).shippingCompany && <Text style={styles.addressText} numberOfLines={1}>{(item as any).shippingCompany}</Text>}
-            <Text style={styles.addressText} numberOfLines={1}>{item.shippingStreet}{(item as any).shippingAddressLine2 ? `, ${(item as any).shippingAddressLine2}` : ''}</Text>
+            {!!((item as any).shippingCompany || (item as any).firma) && <Text style={styles.addressText} numberOfLines={1}>{(item as any).shippingCompany || (item as any).firma}</Text>}
+            <Text style={styles.addressText} numberOfLines={1}>{item.shippingStreet}{((item as any).shippingAddressLine2 || (item as any).adresszusatz) ? `, ${(item as any).shippingAddressLine2 || (item as any).adresszusatz}` : ''}</Text>
             <Text style={styles.addressText} numberOfLines={1}>{item.shippingPostalCode} {item.shippingCity}</Text>
           </View>
         </View>
