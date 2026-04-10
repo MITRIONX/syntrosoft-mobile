@@ -37,6 +37,7 @@ interface Props {
 }
 
 export function VersandWizard({ auftrag, onClose, onComplete }: Props) {
+  const styles = createStyles()
   const [step, setStep] = useState<WizardStep>('positionen')
   const [items, setItems] = useState<FulfillmentItem[]>([])
   const [labels, setLabels] = useState<CreatedLabel[]>([])
@@ -134,7 +135,8 @@ export function VersandWizard({ auftrag, onClose, onComplete }: Props) {
   )
 }
 
-const styles = StyleSheet.create({
+function createStyles() {
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -192,3 +194,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.success,
   },
 })
+}

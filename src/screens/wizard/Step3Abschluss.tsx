@@ -23,6 +23,7 @@ interface DruckVorlage {
 }
 
 export function Step3Abschluss({ auftrag, items, labels, onComplete }: Props) {
+  const styles = createStyles()
   const queryClient = useQueryClient()
   const [templates, setTemplates] = useState<DruckVorlage[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null)
@@ -260,6 +261,7 @@ interface SummarySectionProps {
 }
 
 function SummarySection({ icon, title, color, items, labels }: SummarySectionProps) {
+  const styles = createStyles()
   return (
     <View style={styles.card}>
       <View style={styles.sectionHeader}>
@@ -300,7 +302,8 @@ function SummarySection({ icon, title, color, items, labels }: SummarySectionPro
   )
 }
 
-const styles = StyleSheet.create({
+function createStyles() {
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -475,3 +478,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 })
+}

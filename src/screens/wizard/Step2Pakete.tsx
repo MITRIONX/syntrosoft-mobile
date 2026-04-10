@@ -38,6 +38,7 @@ function newPkg(): Package {
 }
 
 export function Step2Pakete({ auftrag, items, labels, onLabelsChange, onNext }: Props) {
+  const styles = createStyles()
   const [carrier, setCarrier] = useState<Carrier>('dhl')
   const [dhlProduct, setDhlProduct] = useState<DhlProduct>('V01PAK')
   const [packages, setPackages] = useState<Package[]>([newPkg()])
@@ -259,7 +260,8 @@ export function Step2Pakete({ auftrag, items, labels, onLabelsChange, onNext }: 
   )
 }
 
-const styles = StyleSheet.create({
+function createStyles() {
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -462,3 +464,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 })
+}

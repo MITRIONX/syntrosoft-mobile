@@ -51,6 +51,7 @@ function toFulfillmentItem(item: OrderItem): FulfillmentItem {
 }
 
 export function Step1Positionen({ auftrag, items, onItemsLoaded, onNext }: Props) {
+  const styles = createStyles()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [localItems, setLocalItems] = useState<FulfillmentItem[]>(items)
@@ -243,7 +244,8 @@ export function Step1Positionen({ auftrag, items, onItemsLoaded, onNext }: Props
   )
 }
 
-const styles = StyleSheet.create({
+function createStyles() {
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -404,3 +406,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 })
+}
