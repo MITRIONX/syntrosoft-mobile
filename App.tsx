@@ -187,6 +187,7 @@ function AuftraegePage({ navigation }: any) {
   )
 }
 
+
 function TicketsPage({ navigation }: any) {
   const styles = createStyles()
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
