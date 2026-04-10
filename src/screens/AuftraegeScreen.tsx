@@ -91,7 +91,7 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
   const styles = createStyles()
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [orderFilter, setOrderFilter] = useState<OrderFilter>('offen')
+  const [orderFilter, setOrderFilter] = useState<OrderFilter>('alle')
   const [invoiceFilter, setInvoiceFilter] = useState<InvoiceFilter>('alle')
 
   const queryClient = useQueryClient()

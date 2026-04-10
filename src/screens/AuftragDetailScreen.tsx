@@ -513,9 +513,11 @@ export function AuftragDetailScreen({ auftrag, onBack }: AuftragDetailScreenProp
               const badges: { label: string; color: string }[] = []
               if (fi) {
                 const eigenQty = Number(fi.fulfilled_eigenversand || 0)
+                const noShipQty = Number(fi.fulfilled_no_shipping || 0)
                 const streckeQty = Number(fi.fulfilled_strecke || 0) + Number(fi.fulfilled_dropshipping_of || 0)
                 const ekQty = Number(fi.auf_einkaufsliste || 0)
                 const ekBestellt = Number(fi.fulfilled_einkauf || 0)
+                if (noShipQty > 0) badges.push({ label: `O. Versand ${Math.round(noShipQty)}`, color: '#6b7280' })
                 if (eigenQty > 0) badges.push({ label: `Versendet ${Math.round(eigenQty)}`, color: '#a855f7' })
                 if (streckeQty > 0) badges.push({ label: `Strecke ${Math.round(streckeQty)}`, color: '#8b5cf6' })
                 if (ekBestellt > 0) badges.push({ label: `Bestellt ${Math.round(ekBestellt)}`, color: '#f59e0b' })
