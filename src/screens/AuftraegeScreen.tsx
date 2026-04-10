@@ -5,6 +5,7 @@ import { Search, ShoppingCart, X, CheckCircle, Minus, Plus, PackageCheck } from 
 import { api, Auftrag, OrderItem } from '../lib/api'
 import { getConnectionInfo } from '../lib/auth'
 import { colors, spacing } from '../theme'
+import { VersandWizard } from './VersandWizard'
 
 interface AuftraegeScreenProps {
   onSelectAuftrag: (auftrag: Auftrag) => void
@@ -119,14 +120,7 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
   const [ekLoading, setEkLoading] = useState(false)
   const [ekSaving, setEkSaving] = useState(false)
 
-  const [fulfillOrder, setFulfillOrder] = useState<Auftrag | null>(null)
-  const [fulfillItems, setFulfillItems] = useState<(OrderItem & {
-    fulfillType: 'eigen' | 'strecke' | 'ekliste' | 'skip'
-    supplierId?: number | null
-    supplierName?: string | null
-  })[]>([])
-  const [fulfillLoading, setFulfillLoading] = useState(false)
-  const [fulfillSaving, setFulfillSaving] = useState(false)
+  const [wizardOrder, setWizardOrder] = useState<Auftrag | null>(null)
 
   const handleSearch = useCallback((text: string) => {
     setSearch(text)
@@ -229,107 +223,6 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
     )
   }
 
-  const openFulfillment = async (order: Auftrag) => {
-    setContextOrder(null)
-    setFulfillOrder(order)
-    setFulfillLoading(true)
-    try {
-      const res = await api.getOrderItemsForFulfillment(order.id)
-      const items = (res?.items || []).filter((i: OrderItem) => i.item_type === 'artikel' || !i.item_type)
-      setFulfillItems(items.map((i: OrderItem) => ({
-        ...i,
-        fulfillType: (Number(i.stock_total) || 0) > 0 ? 'eigen' as const : 'ekliste' as const,
-        supplierId: i.default_supplier_id,
-        supplierName: i.default_supplier_name,
-      })))
-    } catch { setFulfillItems([]) }
-    setFulfillLoading(false)
-  }
-
-  const confirmFulfillment = () => {
-    if (!fulfillOrder) return
-    const eigenItems = fulfillItems.filter(i => i.fulfillType === 'eigen')
-    const streckeItems = fulfillItems.filter(i => i.fulfillType === 'strecke')
-    const ekItems = fulfillItems.filter(i => i.fulfillType === 'ekliste')
-
-    if (eigenItems.length === 0 && streckeItems.length === 0 && ekItems.length === 0) {
-      Alert.alert('Nichts ausgewaehlt', 'Bitte mindestens eine Position zuweisen.')
-      return
-    }
-
-    const streckeOhneLieferant = streckeItems.filter(i => !i.supplierId)
-    if (streckeOhneLieferant.length > 0) {
-      Alert.alert('Kein Lieferant', `${streckeOhneLieferant.length} Strecken-Position(en) ohne Lieferant. Bitte zuerst im ERP zuweisen.`)
-      return
-    }
-
-    const lines: string[] = []
-    if (eigenItems.length > 0) {
-      lines.push(`Eigenversand (${eigenItems.length}):`)
-      eigenItems.forEach(i => lines.push(`  • ${i.article_name} x${Math.round(Number(i.quantity) - Number(i.quantity_fulfilled || 0))}`))
-    }
-    if (streckeItems.length > 0) {
-      lines.push(`${lines.length > 0 ? '\n' : ''}Strecke (${streckeItems.length}):`)
-      streckeItems.forEach(i => lines.push(`  • ${i.article_name} x${Math.round(Number(i.quantity) - Number(i.quantity_fulfilled || 0))} → ${i.supplierName || '?'}`))
-    }
-    if (ekItems.length > 0) {
-      lines.push(`${lines.length > 0 ? '\n' : ''}Einkaufsliste (${ekItems.length}):`)
-      ekItems.forEach(i => lines.push(`  • ${i.article_name} x${Math.round(Number(i.quantity) - Number(i.quantity_fulfilled || 0))}`))
-    }
-
-    Alert.alert('Auslieferung bestätigen', lines.join('\n'), [
-      { text: 'Abbrechen', style: 'cancel' },
-      { text: 'Ausliefern', onPress: () => doFulfillment(eigenItems, streckeItems, ekItems) },
-    ])
-  }
-
-  const doFulfillment = async (eigenItems: typeof fulfillItems, streckeItems: typeof fulfillItems, ekItems: typeof fulfillItems) => {
-    if (!fulfillOrder) return
-    setFulfillSaving(true)
-    try {
-      // 1. Fulfillment for eigen + strecke
-      const fulfillments = [
-        ...eigenItems.map(i => ({ orderItemId: i.id, fulfillmentType: 'eigenversand', quantity: Math.round(Number(i.quantity) - Number(i.quantity_fulfilled || 0)) })),
-        ...streckeItems.filter(i => i.supplierId).map(i => ({ orderItemId: i.id, fulfillmentType: 'dropshipping', quantity: Math.round(Number(i.quantity) - Number(i.quantity_fulfilled || 0)), supplierId: i.supplierId! })),
-      ]
-      if (fulfillments.length > 0) {
-        await api.completeOrderFulfillment(fulfillOrder.id, fulfillments)
-      }
-
-      // 2. Shopping list for EK items
-      if (ekItems.length > 0) {
-        const conn = await getConnectionInfo()
-        if (conn) {
-          await fetch(`${conn.serverUrl}/api/mobile/versand/shopping-list/batch`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${conn.deviceToken}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              items: ekItems.map(i => ({
-                artikel_nummer: i.article_number,
-                artikel_name: i.article_name,
-                menge: Math.round(Number(i.quantity) - Number(i.quantity_fulfilled || 0)),
-                einheit: i.unit || 'Stk',
-                order_id: fulfillOrder.id,
-                order_number: fulfillOrder.order_number,
-                supplier_id: i.default_supplier_id,
-                supplier_name: i.default_supplier_name,
-              })),
-            }),
-          })
-        }
-      }
-
-      queryClient.invalidateQueries({ queryKey: ['auftraege'] })
-      queryClient.invalidateQueries({ queryKey: ['shopping-list'] })
-      setFulfillOrder(null)
-
-      Alert.alert('Erledigt', 'Auslieferung wurde verarbeitet.')
-    } catch (e: any) {
-      Alert.alert('Fehler', e?.message || 'Fehlgeschlagen')
-    }
-    setFulfillSaving(false)
-  }
-
   const renderAuftrag = ({ item }: { item: Auftrag }) => {
     const customerName =
       item.customer_display_name ||
@@ -371,6 +264,19 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
           </View>
         </View>
       </TouchableOpacity>
+    )
+  }
+
+  if (wizardOrder) {
+    return (
+      <VersandWizard
+        auftrag={wizardOrder}
+        onClose={() => setWizardOrder(null)}
+        onComplete={() => {
+          setWizardOrder(null)
+          queryClient.invalidateQueries({ queryKey: ['auftraege'] })
+        }}
+      />
     )
   }
 
@@ -465,7 +371,7 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.contextItem} onPress={() => contextOrder && openFulfillment(contextOrder)}>
+            <TouchableOpacity style={styles.contextItem} onPress={() => { setWizardOrder(contextOrder); setContextOrder(null) }}>
               <PackageCheck size={20} color={colors.primary} />
               <Text style={styles.contextItemText}>Ausliefern</Text>
             </TouchableOpacity>
@@ -577,117 +483,6 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
         </View>
       </Modal>
 
-      {/* Ausliefern Modal */}
-      <Modal visible={!!fulfillOrder} transparent animationType="slide" onRequestClose={() => setFulfillOrder(null)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.fulfillModal}>
-            <View style={styles.fulfillHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.fulfillTitle}>Ausliefern</Text>
-                <Text style={styles.fulfillSubtitle}>#{fulfillOrder?.order_number}</Text>
-              </View>
-              <TouchableOpacity onPress={() => setFulfillOrder(null)}>
-                <X size={22} color={colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-
-            {fulfillLoading ? (
-              <View style={styles.fulfillCentered}>
-                <ActivityIndicator size="large" color={colors.primary} />
-              </View>
-            ) : fulfillItems.length === 0 ? (
-              <View style={styles.fulfillCentered}>
-                <Text style={styles.emptyText}>Keine Artikel-Positionen gefunden</Text>
-              </View>
-            ) : (
-              <ScrollView style={styles.fulfillList} contentContainerStyle={{ paddingBottom: 16 }}>
-                {fulfillItems.map((item, idx) => {
-                  const openQty = Math.max(0, Math.round(Number(item.quantity) - Number(item.quantity_fulfilled || 0)))
-                  return (
-                    <View key={item.id} style={styles.fulfillItem}>
-                      <View style={styles.fulfillItemTop}>
-                        <View style={{ flex: 1 }}>
-                          {item.article_number && <Text style={styles.fulfillArtNr}>{item.article_number}</Text>}
-                          <Text style={styles.fulfillItemName} numberOfLines={2}>{item.article_name || 'Unbekannt'}</Text>
-                        </View>
-                        <Text style={styles.fulfillQty}>Menge: {openQty}</Text>
-                      </View>
-                      <View style={styles.fulfillSegments}>
-                        {([
-                          { key: 'eigen' as const, label: 'Eigen', color: '#3b82f6' },
-                          { key: 'strecke' as const, label: 'Strecke', color: '#a855f7' },
-                          { key: 'ekliste' as const, label: 'EK', color: '#f59e0b' },
-                          { key: 'skip' as const, label: 'Skip', color: '#6b7280' },
-                        ]).map(seg => (
-                          <TouchableOpacity
-                            key={seg.key}
-                            style={[
-                              styles.fulfillSegBtn,
-                              item.fulfillType === seg.key && { backgroundColor: seg.color, borderColor: seg.color },
-                            ]}
-                            onPress={() => {
-                              const updated = [...fulfillItems]
-                              updated[idx] = { ...updated[idx], fulfillType: seg.key }
-                              setFulfillItems(updated)
-                            }}
-                          >
-                            <Text style={[
-                              styles.fulfillSegText,
-                              item.fulfillType === seg.key && { color: '#fff' },
-                            ]}>{seg.label}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                      {item.fulfillType === 'strecke' && (
-                        <View style={styles.fulfillSupplierRow}>
-                          {(item.suppliers || []).length > 1 ? (
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.fulfillSupplierScroll}>
-                              {(item.suppliers || []).map((s: any) => (
-                                <TouchableOpacity
-                                  key={s.id}
-                                  style={[styles.fulfillSupplierChip, item.supplierId === s.id && styles.fulfillSupplierChipActive]}
-                                  onPress={() => {
-                                    const updated = [...fulfillItems]
-                                    updated[idx] = { ...updated[idx], supplierId: s.id, supplierName: s.name }
-                                    setFulfillItems(updated)
-                                  }}
-                                >
-                                  <Text style={[styles.fulfillSupplierChipText, item.supplierId === s.id && { color: '#fff' }]} numberOfLines={1}>{s.name}</Text>
-                                </TouchableOpacity>
-                              ))}
-                            </ScrollView>
-                          ) : item.supplierName ? (
-                            <Text style={styles.fulfillSupplier}>Lieferant: {item.supplierName}</Text>
-                          ) : (
-                            <Text style={[styles.fulfillSupplier, { color: colors.danger }]}>Kein Lieferant hinterlegt</Text>
-                          )}
-                        </View>
-                      )}
-                    </View>
-                  )
-                })}
-              </ScrollView>
-            )}
-
-            <View style={styles.fulfillFooter}>
-              <TouchableOpacity style={styles.ekCancelBtn} onPress={() => setFulfillOrder(null)}>
-                <Text style={styles.ekCancelText}>Abbrechen</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.fulfillSubmitBtn, fulfillSaving && { opacity: 0.6 }]}
-                onPress={confirmFulfillment}
-                disabled={fulfillSaving}
-              >
-                {fulfillSaving ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.ekSubmitText}>Ausliefern ({fulfillItems.filter(i => i.fulfillType !== 'skip').length})</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   )
 }
@@ -1054,111 +849,5 @@ function createStyles() { return StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#fff',
-  },
-  // Fulfillment Modal
-  fulfillModal: {
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    width: '92%',
-    maxWidth: 420,
-    maxHeight: '85%',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  fulfillHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  fulfillTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  fulfillSubtitle: {
-    fontSize: 13,
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-  fulfillCentered: {
-    padding: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fulfillList: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-  },
-  fulfillItem: {
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  fulfillItemTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  fulfillArtNr: {
-    fontSize: 11,
-    color: colors.textMuted,
-    marginBottom: 1,
-  },
-  fulfillItemName: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  fulfillQty: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    marginLeft: 8,
-  },
-  fulfillSegments: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  fulfillSegBtn: {
-    flex: 1,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-  },
-  fulfillSegText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  fulfillSupplierRow: { marginTop: 6 },
-  fulfillSupplierScroll: { flexDirection: 'row' },
-  fulfillSupplierChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: colors.surfaceHover, marginRight: 6, borderWidth: 1, borderColor: colors.border },
-  fulfillSupplierChipActive: { backgroundColor: '#a855f7', borderColor: '#a855f7' },
-  fulfillSupplierChipText: { fontSize: 12, color: colors.text, fontWeight: '500' },
-  fulfillSupplier: {
-    fontSize: 11,
-    color: '#a855f7',
-    marginTop: 6,
-  },
-  fulfillFooter: {
-    flexDirection: 'row',
-    padding: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    gap: 10,
-  },
-  fulfillSubmitBtn: {
-    flex: 2,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: '#3b82f6',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 }) }
