@@ -60,6 +60,7 @@ function StatusBadge({ status }: { status: string }) {
 
 type OrderFilter = 'alle' | 'offen' | 'teilbestellt' | 'bestellt'
 type InvoiceFilter = 'alle' | 'ohne_berechnung' | 'berechnet'
+type TimeFilter = 7 | 30 | 90 | 365
 
 const ORDER_FILTER_TABS: { key: OrderFilter; label: string }[] = [
   { key: 'alle', label: 'Alle' },
@@ -72,6 +73,13 @@ const INVOICE_FILTER_TABS: { key: InvoiceFilter; label: string }[] = [
   { key: 'alle', label: 'Alle' },
   { key: 'ohne_berechnung', label: 'O. Berechnung' },
   { key: 'berechnet', label: 'Berechnet' },
+]
+
+const TIME_FILTER_TABS: { key: TimeFilter; label: string }[] = [
+  { key: 7, label: '7 Tage' },
+  { key: 30, label: '30 Tage' },
+  { key: 90, label: '90 Tage' },
+  { key: 365, label: '365 Tage' },
 ]
 
 const ORDER_FILTER_MAP: Record<OrderFilter, string[]> = {
@@ -93,6 +101,7 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [orderFilter, setOrderFilter] = useState<OrderFilter>('alle')
   const [invoiceFilter, setInvoiceFilter] = useState<InvoiceFilter>('alle')
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>(30)
 
   const queryClient = useQueryClient()
   const [contextOrder, setContextOrder] = useState<Auftrag | null>(null)
@@ -123,12 +132,18 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
   })
 
   const allAuftraege = data?.data || []
+  const cutoffDate = new Date()
+  cutoffDate.setDate(cutoffDate.getDate() - timeFilter)
+  const cutoffIso = cutoffDate.toISOString()
+
   const auftraege = allAuftraege.filter((a: any) => {
     const status = (a.computed_status || a.status || 'offen').toLowerCase()
     const invStatus = (a.invoice_status || 'ohne_berechnung').toLowerCase()
     const matchesOrder = ORDER_FILTER_MAP[orderFilter].includes(status)
     const matchesInvoice = INVOICE_FILTER_MAP[invoiceFilter].includes(invStatus)
-    return matchesOrder && matchesInvoice
+    const orderDate = a.order_date || a.created_at || ''
+    const matchesTime = orderDate >= cutoffIso
+    return matchesOrder && matchesInvoice && matchesTime
   })
 
   const openEkListe = async (order: Auftrag) => {
@@ -352,6 +367,19 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
 
   return (
     <View style={styles.container}>
+      {/* Zeitraum Filter */}
+      <View style={styles.tabsTime}>
+        {TIME_FILTER_TABS.map(tab => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[styles.tab, timeFilter === tab.key && styles.tabTimeActive]}
+            onPress={() => setTimeFilter(tab.key)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.tabText, timeFilter === tab.key && styles.tabTextTimeActive]}>{tab.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
       {/* Bestell-Status Filter */}
       <View style={styles.tabs}>
         {ORDER_FILTER_TABS.map(tab => (
@@ -663,6 +691,16 @@ function createStyles() { return StyleSheet.create({
   tabs: {
     flexDirection: 'row',
     marginHorizontal: spacing.md,
+    marginTop: 4,
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  tabsTime: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.md,
     marginTop: spacing.md,
     backgroundColor: colors.surface,
     borderRadius: 10,
@@ -689,6 +727,9 @@ function createStyles() { return StyleSheet.create({
   tabActive: {
     backgroundColor: colors.primary,
   },
+  tabTimeActive: {
+    backgroundColor: '#6b7280',
+  },
   tabSecondaryActive: {
     backgroundColor: '#22c55e',
   },
@@ -698,6 +739,10 @@ function createStyles() { return StyleSheet.create({
     color: colors.textSecondary,
   },
   tabTextActive: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  tabTextTimeActive: {
     color: '#fff',
     fontWeight: '600',
   },

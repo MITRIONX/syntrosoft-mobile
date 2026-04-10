@@ -2,7 +2,7 @@
   "expo": {
     "name": "syntrosoft-mobile",
     "slug": "syntrosoft-mobile",
-    "version": "2.6.1",
+    "version": "2.6.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
