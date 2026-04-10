@@ -155,11 +155,12 @@ function FulfillmentCard({ related, onSelectPO }: { related: AuftragRelated | un
   const labels = allLabels.filter((l: any) => !trackingNumbers.has(l.tracking_number))
   const belege = related?.eingangsbelege || []
   const allAbLogs = (related as any)?.abLogs || []
+  const ausgangsrechnungen = (related as any)?.ausgangsrechnungen || []
   // Rechnungen aus AB-Logs herausfiltern und zu Eingangsrechnungen verschieben
   const isRechnung = (ab: any) => /rechnung|invoice|VRE/i.test(ab.attachment_filename || '')
   const abLogs = allAbLogs.filter((ab: any) => !isRechnung(ab))
   const rechnungenFromAb = allAbLogs.filter(isRechnung)
-  const hasAny = related && (po.length > 0 || labels.length > 0 || tracking.length > 0 || belege.length > 0 || allAbLogs.length > 0)
+  const hasAny = related && (po.length > 0 || labels.length > 0 || tracking.length > 0 || belege.length > 0 || allAbLogs.length > 0 || ausgangsrechnungen.length > 0)
 
   const openTracking = (carrier: string, trackingNumber: string, customUrl?: string) => {
     if (customUrl) {
@@ -338,6 +339,26 @@ function FulfillmentCard({ related, onSelectPO }: { related: AuftragRelated | un
                   </TouchableOpacity>
                 )
               })}
+            </FulfillmentSection>
+          )}
+
+          {/* 5. Ausgangsrechnungen */}
+          {ausgangsrechnungen.length > 0 && (
+            <FulfillmentSection title="Ausgangsrechnungen" icon={<FileCheck size={13} color={colors.textMuted} />}>
+              {ausgangsrechnungen.map((inv: any, i: number) => (
+                <View key={'inv-' + i} style={[fulfillStyles.row, i > 0 && fulfillStyles.rowBorder]}>
+                  <View style={fulfillStyles.rowMain}>
+                    <Text style={fulfillStyles.rowTitle}>Rechnung {inv.invoice_number}</Text>
+                    {inv.ticket_subject && <Text style={fulfillStyles.rowSub} numberOfLines={1}>{inv.ticket_subject}</Text>}
+                  </View>
+                  <View style={fulfillStyles.rowRight}>
+                    <View style={[fulfillStyles.minibadge, { backgroundColor: '#22c55e25' }]}>
+                      <Text style={[fulfillStyles.minibadgeText, { color: '#22c55e' }]}>Berechnet</Text>
+                    </View>
+                    <Text style={fulfillStyles.rowDate}>{formatDate(inv.created_at)}</Text>
+                  </View>
+                </View>
+              ))}
             </FulfillmentSection>
           )}
         </>

@@ -95,13 +95,22 @@ const INVOICE_FILTER_MAP: Record<InvoiceFilter, string[]> = {
   berechnet: ['berechnet', 'teilberechnet'],
 }
 
+// Filter-State auf Modul-Ebene damit er beim Unmount/Remount erhalten bleibt
+let _savedOrderFilter: OrderFilter = 'alle'
+let _savedInvoiceFilter: InvoiceFilter = 'alle'
+let _savedTimeFilter: TimeFilter = 30
+
 export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
   const styles = createStyles()
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [orderFilter, setOrderFilter] = useState<OrderFilter>('alle')
-  const [invoiceFilter, setInvoiceFilter] = useState<InvoiceFilter>('alle')
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>(30)
+  const [orderFilter, setOrderFilterState] = useState<OrderFilter>(_savedOrderFilter)
+  const [invoiceFilter, setInvoiceFilterState] = useState<InvoiceFilter>(_savedInvoiceFilter)
+  const [timeFilter, setTimeFilterState] = useState<TimeFilter>(_savedTimeFilter)
+
+  const setOrderFilter = (v: OrderFilter) => { _savedOrderFilter = v; setOrderFilterState(v) }
+  const setInvoiceFilter = (v: InvoiceFilter) => { _savedInvoiceFilter = v; setInvoiceFilterState(v) }
+  const setTimeFilter = (v: TimeFilter) => { _savedTimeFilter = v; setTimeFilterState(v) }
 
   const queryClient = useQueryClient()
   const [contextOrder, setContextOrder] = useState<Auftrag | null>(null)
