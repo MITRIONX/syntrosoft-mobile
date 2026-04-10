@@ -75,6 +75,20 @@ export interface KundenResponse {
   total?: number
 }
 
+export interface AddressValidation {
+  orderId: number
+  orderNumber: string
+  customerName: string
+  shippingStreet: string
+  shippingPostalCode: string
+  shippingCity: string
+  shippingCountry: string
+  validationStatus: 'PENDING' | 'VALID' | 'SUSPECT' | 'INVALID'
+  suggestion?: { street: string; postalCode: string; city: string }
+  changes?: string[]
+  validatedAt: string | null
+}
+
 export const api = {
   async searchKunden(search: string, limit = 20, offset = 0): Promise<KundenResponse> {
     return mobileFetch('/kunden', { search, limit: String(limit), offset: String(offset) })
@@ -339,6 +353,30 @@ export const api = {
 
   async getDeliveryNotes(orderId: number): Promise<{ success: boolean; data: any[] }> {
     return mobileFetch(`/versand/delivery-notes/order/${orderId}`)
+  },
+
+  // --- Adressvalidierung ---
+
+  async validateOrderAddresses(ids?: number[]): Promise<{ success: boolean; data: AddressValidation[] }> {
+    const params: Record<string, string> = {}
+    if (ids && ids.length > 0) params.ids = ids.join(',')
+    return mobileFetch('/versand/shipping/validate-order-addresses', params)
+  },
+
+  async validateAddress(body: { street: string; postalCode: string; city: string; country?: string }): Promise<{ success: boolean; status: string; suggestion?: any; changes?: string[] }> {
+    return mobilePost('/versand/shipping/validate-address', body)
+  },
+
+  async validateAddressGoogle(body: { street: string; postalCode: string; city: string; country?: string }): Promise<{ success: boolean; formattedAddress?: string; structured?: { street: string; postalCode: string; city: string } }> {
+    return mobilePost('/versand/shipping/validate-address-google', body)
+  },
+
+  async updateOrderAddress(orderId: number, body: { shipping_street?: string; shipping_postal_code?: string; shipping_city?: string; shipping_country?: string }): Promise<{ success: boolean }> {
+    return mobilePut(`/versand/shipping/order/${orderId}/address`, body)
+  },
+
+  async markAddressValid(orderId: number): Promise<{ success: boolean }> {
+    return mobilePost(`/versand/shipping/mark-valid/${orderId}`, {})
   },
 }
 

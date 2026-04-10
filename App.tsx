@@ -6,7 +6,7 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native'
 import { createDrawerNavigator, DrawerContentScrollView, DrawerContentComponentProps } from '@react-navigation/drawer'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Users, Settings, Menu, ShoppingCart, MessageSquare, Phone, Truck, ShoppingBag, ChevronDown, ChevronRight, ClipboardList, Package, FileText, Receipt } from 'lucide-react-native'
+import { Users, Settings, Menu, ShoppingCart, MessageSquare, Phone, Truck, ShoppingBag, ChevronDown, ChevronRight, ClipboardList, Package, FileText, Receipt, MapPin } from 'lucide-react-native'
 import * as SecureStore from 'expo-secure-store'
 import { getConnectionInfo, ConnectionInfo } from './src/lib/auth'
 import { checkForUpdate } from './src/lib/updater'
@@ -25,6 +25,7 @@ import { EinkaufslisteScreen } from './src/screens/EinkaufslisteScreen'
 import { BestellungenScreen } from './src/screens/BestellungenScreen'
 import { AngeboteScreen } from './src/screens/AngeboteScreen'
 import { RechnungenScreen } from './src/screens/RechnungenScreen'
+import { AdressvalidierungScreen } from './src/screens/AdressvalidierungScreen'
 import { colors, darkColors, lightColors, setThemeColors, ThemeContext, ThemeMode } from './src/theme'
 
 const queryClient = new QueryClient()
@@ -64,6 +65,7 @@ const MENU_ITEMS: MenuItem[] = [
   ]},
   { name: 'Versand', icon: Truck, label: 'Versand', children: [
     { name: 'Sendungsverfolgung', icon: Truck, label: 'Sendungsverfolgung' },
+    { name: 'Adressvalidierung', icon: MapPin, label: 'Adressvalidierung' },
   ]},
   { name: 'Tickets', icon: MessageSquare, label: 'Tickets' },
   { name: 'Telefon', icon: Phone, label: 'Telefon' },
@@ -224,6 +226,16 @@ function VersandPage({ navigation }: any) {
   )
 }
 
+function AdressvalidierungPage({ navigation }: any) {
+  const styles = createStyles()
+  return (
+    <View style={styles.screenContainer}>
+      <ScreenHeader title="Adressvalidierung" navigation={navigation} />
+      <AdressvalidierungScreen />
+    </View>
+  )
+}
+
 function EinkaufslistePage({ navigation }: any) {
   const styles = createStyles()
   return (
@@ -353,6 +365,7 @@ export default function App() {
               <Drawer.Screen name="Tickets" component={TicketsPage} />
               <Drawer.Screen name="Telefon" component={TelefonPage} />
               <Drawer.Screen name="Sendungsverfolgung" component={VersandPage} />
+              <Drawer.Screen name="Adressvalidierung" component={AdressvalidierungPage} />
               <Drawer.Screen name="Einkaufsliste" component={EinkaufslistePage} />
               <Drawer.Screen name="Bestellungen" component={BestellungenPage} />
               <Drawer.Screen name="Einstellungen" component={SettingsPage} />
