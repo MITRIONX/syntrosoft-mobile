@@ -2,7 +2,7 @@
   "expo": {
     "name": "syntrosoft-mobile",
     "slug": "syntrosoft-mobile",
-    "version": "3.2.58",
+    "version": "3.2.6",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -26,7 +26,7 @@
         "android.permission.CAMERA"
       ],
       "package": "de.syntrosoft.mobile",
-      "versionCode": 58
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"
