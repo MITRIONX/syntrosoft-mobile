@@ -2,7 +2,7 @@
   "expo": {
     "name": "syntrosoft-mobile",
     "slug": "syntrosoft-mobile",
-    "version": "3.2.5",
+    "version": "3.2.6",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -23,16 +23,23 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.CAMERA",
         "android.permission.CAMERA"
       ],
-      "package": "de.syntrosoft.mobile"
+      "package": "de.syntrosoft.mobile",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Fotos auswaehlen zur Fehlermeldung",
+          "cameraPermission": "Foto aufnehmen zur Fehlermeldung"
+        }
+      ]
     ]
   }
 }
