@@ -676,3 +676,149 @@ export interface AuftragItem {
   total_net: number
   total_gross: number
 }
+
+// =====================================================================
+// Issue Tracker
+// =====================================================================
+
+export type IssueStatus = 'neu' | 'in_bearbeitung' | 'erledigt'
+
+export interface Issue {
+  id: number
+  tenant_id: number
+  created_by_user_id: number
+  created_by_name: string
+  title: string
+  description: string
+  category_id: number
+  category_name: string
+  category_icon: string | null
+  status: IssueStatus
+  last_message_at: string | null
+  unread_tenant: number
+  attachment_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface IssueMessageAttachment {
+  id: number
+  mime_type: string
+  original_filename: string
+  size_bytes: number
+}
+
+export interface IssueMessage {
+  id: number
+  issue_id: number
+  sender_type: 'tenant' | 'admin'
+  sender_name: string
+  content: string
+  created_at: string
+  attachments: IssueMessageAttachment[]
+}
+
+export interface IssueCategory {
+  id: number
+  name: string
+  icon: string | null
+  sort_order: number
+}
+
+export interface IssueAttachmentMeta {
+  id: number
+  message_id: number | null
+  mime_type: string
+  original_filename: string
+  size_bytes: number
+  created_at: string
+}
+
+export interface IssueDetailResponse {
+  success: boolean
+  issue: Issue
+  attachments: IssueAttachmentMeta[]
+}
+
+export async function fetchIssueCategories(): Promise<IssueCategory[]> {
+  const data = await mobileFetch<{ success: boolean; categories: IssueCategory[] }>(`/issues/categories`)
+  return data.categories || []
+}
+
+export async function fetchIssues(status?: IssueStatus): Promise<Issue[]> {
+  const data = await mobileFetch<{ success: boolean; issues: Issue[] }>(
+    `/issues`,
+    status ? { status } : undefined,
+  )
+  return data.issues || []
+}
+
+export async function fetchIssueDetail(id: number): Promise<IssueDetailResponse> {
+  return mobileFetch<IssueDetailResponse>(`/issues/${id}`)
+}
+
+export async function fetchIssueMessages(id: number): Promise<IssueMessage[]> {
+  const data = await mobileFetch<{ success: boolean; messages: IssueMessage[] }>(`/issues/${id}/messages`)
+  return data.messages || []
+}
+
+export async function fetchIssueUnreadCount(): Promise<number> {
+  const data = await mobileFetch<{ success: boolean; count: number }>(`/issues/unread-count`)
+  return data.count || 0
+}
+
+export async function issueAttachmentUrl(attachmentId: number): Promise<string | null> {
+  const conn = await getConnectionInfo()
+  if (!conn) return null
+  return `${conn.serverUrl}/api/mobile/issues/attachments/${attachmentId}?token=${conn.deviceToken}`
+}
+
+export interface IssuePhotoInput {
+  uri: string
+  name: string
+  type: string
+}
+
+export async function createIssue(
+  data: { title: string; description: string; category_id: number; photos: IssuePhotoInput[] },
+): Promise<{ success: boolean; issue?: Issue; error?: string }> {
+  const conn = await getConnectionInfo()
+  if (!conn) return { success: false, error: 'Nicht verbunden' }
+
+  const fd = new FormData()
+  fd.append('title', data.title)
+  fd.append('description', data.description)
+  fd.append('category_id', String(data.category_id))
+  for (const p of data.photos) {
+    fd.append('photos', { uri: p.uri, name: p.name, type: p.type } as any)
+  }
+
+  const res = await fetch(`${conn.serverUrl}/api/mobile/issues`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${conn.deviceToken}` },
+    body: fd as any,
+  })
+  return res.json()
+}
+
+export async function sendIssueMessage(
+  issueId: number,
+  content: string,
+  photos: IssuePhotoInput[] = [],
+): Promise<{ success: boolean; message?: IssueMessage; error?: string }> {
+  const conn = await getConnectionInfo()
+  if (!conn) return { success: false, error: 'Nicht verbunden' }
+
+  const fd = new FormData()
+  fd.append('content', content)
+  for (const p of photos) {
+    fd.append('photos', { uri: p.uri, name: p.name, type: p.type } as any)
+  }
+
+  const res = await fetch(`${conn.serverUrl}/api/mobile/issues/${issueId}/messages`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${conn.deviceToken}` },
+    body: fd as any,
+  })
+  return res.json()
+}
