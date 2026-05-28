@@ -6,7 +6,7 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native'
 import { createDrawerNavigator, DrawerContentScrollView, DrawerContentComponentProps } from '@react-navigation/drawer'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Users, Settings, Menu, ShoppingCart, MessageSquare, Phone, Truck, ShoppingBag, ChevronDown, ChevronRight, ClipboardList, Package, FileText, Receipt, MapPin } from 'lucide-react-native'
+import { Users, Settings, Menu, ShoppingCart, MessageSquare, Phone, Truck, ShoppingBag, ChevronDown, ChevronRight, ClipboardList, Package, FileText, Receipt, MapPin, AlertOctagon } from 'lucide-react-native'
 import * as SecureStore from 'expo-secure-store'
 import { getConnectionInfo, ConnectionInfo } from './src/lib/auth'
 import { checkForUpdate } from './src/lib/updater'
@@ -18,6 +18,9 @@ import { AuftraegeScreen } from './src/screens/AuftraegeScreen'
 import { AuftragDetailScreen } from './src/screens/AuftragDetailScreen'
 import { TicketsScreen } from './src/screens/TicketsScreen'
 import { TicketDetailScreen } from './src/screens/TicketDetailScreen'
+import { IssuesScreen } from './src/screens/IssuesScreen'
+import { NewIssueScreen } from './src/screens/NewIssueScreen'
+import { IssueDetailScreen } from './src/screens/IssueDetailScreen'
 import { SettingsScreen } from './src/screens/SettingsScreen'
 import { TelefonScreen } from './src/screens/TelefonScreen'
 import { SendungsverfolgungScreen } from './src/screens/SendungsverfolgungScreen'
@@ -69,6 +72,7 @@ const MENU_ITEMS: MenuItem[] = [
   ]},
   { name: 'Tickets', icon: MessageSquare, label: 'Tickets' },
   { name: 'Telefon', icon: Phone, label: 'Telefon' },
+  { name: 'Issues', icon: AlertOctagon, label: 'Fehler melden' },
   { name: 'Einstellungen', icon: Settings, label: 'Einstellungen' },
 ]
 
@@ -202,6 +206,33 @@ function TicketsPage({ navigation }: any) {
     <View style={styles.screenContainer}>
       <ScreenHeader title="Tickets" navigation={navigation} />
       <TicketsScreen onSelectTicket={setSelectedTicket} />
+    </View>
+  )
+}
+
+function IssuesPage({ navigation }: any) {
+  const styles = createStyles()
+  const [selectedIssueId, setSelectedIssueId] = useState<number | null>(null)
+  const [creatingNew, setCreatingNew] = useState(false)
+
+  if (selectedIssueId !== null) {
+    return (
+      <IssueDetailScreen
+        id={selectedIssueId}
+        onBack={() => setSelectedIssueId(null)}
+      />
+    )
+  }
+  if (creatingNew) {
+    return <NewIssueScreen onBack={() => setCreatingNew(false)} />
+  }
+  return (
+    <View style={styles.screenContainer}>
+      <ScreenHeader title="Fehler melden" navigation={navigation} />
+      <IssuesScreen
+        onSelectIssue={setSelectedIssueId}
+        onCreateNew={() => setCreatingNew(true)}
+      />
     </View>
   )
 }
@@ -378,6 +409,7 @@ export default function App() {
               <Drawer.Screen name="Angebote" component={AngebotePage} />
               <Drawer.Screen name="Rechnungen" component={RechnungenPage} />
               <Drawer.Screen name="Tickets" component={TicketsPage} />
+              <Drawer.Screen name="Issues" component={IssuesPage} />
               <Drawer.Screen name="Telefon" component={TelefonPage} />
               <Drawer.Screen name="Sendungsverfolgung" component={VersandPage} />
               <Drawer.Screen name="Adressvalidierung" component={AdressvalidierungPage} />

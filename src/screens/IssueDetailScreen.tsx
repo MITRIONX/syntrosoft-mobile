@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Image, Alert } from 'react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import * as ImagePicker from 'expo-image-picker'
-import { Send, Camera as CameraIcon, ImagePlus, X } from 'lucide-react-native'
+import { Send, Camera as CameraIcon, ImagePlus, X, ArrowLeft } from 'lucide-react-native'
 import {
   fetchIssueDetail,
   fetchIssueMessages,
@@ -31,9 +31,8 @@ function AttachmentImage({ attachmentId, style }: { attachmentId: number; style:
   return <Image source={{ uri: url }} style={style} />
 }
 
-export function IssueDetailScreen({ route }: any) {
+export function IssueDetailScreen({ id, onBack }: { id: number; onBack: () => void }) {
   const styles = createStyles()
-  const id: number = route.params.id
   const qc = useQueryClient()
 
   const { data: det } = useQuery({
@@ -98,6 +97,11 @@ export function IssueDetailScreen({ route }: any) {
   if (!det?.issue) {
     return (
       <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={onBack} style={{ padding: 4, alignSelf: 'flex-start' }}>
+            <ArrowLeft size={22} color={colors.text} />
+          </TouchableOpacity>
+        </View>
         <Text style={styles.muted}>Lade…</Text>
       </View>
     )
@@ -110,8 +114,13 @@ export function IssueDetailScreen({ route }: any) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={[styles.statusPill, { backgroundColor: status.color }]}>
-          <Text style={styles.statusText}>{status.label}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+          <TouchableOpacity onPress={onBack} style={{ padding: 4, marginRight: 6 }}>
+            <ArrowLeft size={22} color={colors.text} />
+          </TouchableOpacity>
+          <View style={[styles.statusPill, { backgroundColor: status.color }]}>
+            <Text style={styles.statusText}>{status.label}</Text>
+          </View>
         </View>
         <Text style={styles.title}>{issue.title}</Text>
         <Text style={styles.meta}>{issue.category_name} · #{issue.id}</Text>
