@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useFocusEffect } from '@react-navigation/native'
 import { Plus, AlertCircle, Loader, CheckCircle2, Image as ImageIcon } from 'lucide-react-native'
 import { fetchIssues, Issue, IssueStatus } from '../lib/api'
 import { colors } from '../theme'
@@ -13,8 +14,9 @@ const STATUS_META: Record<IssueStatus, { label: string; color: string; Icon: any
 
 type Filter = 'all' | IssueStatus
 
-export function IssuesScreen({ onSelectIssue, onCreateNew }: { onSelectIssue: (id: number) => void; onCreateNew: () => void }) {
+export function IssuesScreen({ navigation }: any) {
   const styles = createStyles()
+  const qc = useQueryClient()
   const [filter, setFilter] = useState<Filter>('all')
 
   const { data: issues = [], refetch, isLoading, isFetching } = useQuery({
@@ -22,6 +24,10 @@ export function IssuesScreen({ onSelectIssue, onCreateNew }: { onSelectIssue: (i
     queryFn: () => fetchIssues(filter === 'all' ? undefined : filter),
     refetchInterval: 30000,
   })
+
+  useFocusEffect(useCallback(() => {
+    qc.invalidateQueries({ queryKey: ['issues'] })
+  }, [qc]))
 
   return (
     <View style={styles.container}>
@@ -45,11 +51,11 @@ export function IssuesScreen({ onSelectIssue, onCreateNew }: { onSelectIssue: (i
           <Text style={styles.empty}>{isLoading ? 'Lade…' : 'Keine Fehler-Meldungen.'}</Text>
         }
         renderItem={({ item }) => (
-          <IssueRow item={item} onPress={() => onSelectIssue(item.id)} />
+          <IssueRow item={item} onPress={() => navigation.navigate('IssueDetail', { id: item.id })} />
         )}
       />
 
-      <TouchableOpacity style={styles.fab} onPress={onCreateNew}>
+      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('NewIssue')}>
         <Plus size={28} color="#fff" />
       </TouchableOpacity>
     </View>

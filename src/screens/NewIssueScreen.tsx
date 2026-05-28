@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Image, Alert } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import * as ImagePicker from 'expo-image-picker'
-import { Camera as CameraIcon, ImagePlus, X, ArrowLeft } from 'lucide-react-native'
+import { Camera as CameraIcon, ImagePlus, X } from 'lucide-react-native'
 import { fetchIssueCategories, createIssue, IssuePhotoInput } from '../lib/api'
 import { colors } from '../theme'
 
-export function NewIssueScreen({ onBack }: { onBack: () => void }) {
+export function NewIssueScreen({ navigation }: any) {
   const styles = createStyles()
   const { data: categories = [] } = useQuery({
     queryKey: ['issue-categories'],
@@ -66,7 +66,7 @@ export function NewIssueScreen({ onBack }: { onBack: () => void }) {
       })
       if (res.success) {
         Alert.alert('Gemeldet', 'Dein Fehler wurde uebermittelt.')
-        onBack()
+        navigation.goBack()
       } else {
         Alert.alert('Fehler', res.error || 'Unbekannter Fehler')
       }
@@ -76,14 +76,7 @@ export function NewIssueScreen({ onBack }: { onBack: () => void }) {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={styles.headerBar}>
-        <TouchableOpacity onPress={onBack} style={{ padding: 8 }}>
-          <ArrowLeft size={22} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Fehler melden</Text>
-      </View>
-      <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
       <Text style={styles.label}>Titel *</Text>
       <TextInput value={title} onChangeText={setTitle} style={styles.input} maxLength={200}
         placeholder="z.B. Drucker druckt nicht" placeholderTextColor={colors.textMuted} />
@@ -130,16 +123,13 @@ export function NewIssueScreen({ onBack }: { onBack: () => void }) {
         style={[styles.submit, !canSubmit && { opacity: 0.4 }]}>
         <Text style={styles.submitText}>{sending ? 'Sende…' : 'Senden'}</Text>
       </TouchableOpacity>
-      </ScrollView>
-    </View>
+    </ScrollView>
   )
 }
 
 function createStyles() {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    headerBar: { flexDirection: 'row', alignItems: 'center', padding: 6, borderBottomWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
-    headerTitle: { color: colors.text, fontSize: 16, fontWeight: '600', marginLeft: 6 },
     label: { color: colors.text, fontWeight: '600', marginTop: 12, marginBottom: 6 },
     input: { backgroundColor: colors.surface, color: colors.text, borderRadius: 8, padding: 12, fontSize: 14 },
     chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, backgroundColor: colors.surface, marginRight: 6 },
