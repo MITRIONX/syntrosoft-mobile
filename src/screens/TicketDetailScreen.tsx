@@ -12,9 +12,20 @@ interface TicketDetailScreenProps {
   onBack: () => void
 }
 
-function decodeHtmlEntities(text: string): string {
+// Erkennt, ob ein String echtes HTML-Markup enthaelt (mind. ein Tag).
+function looksLikeHtml(s: string | null | undefined): boolean {
+  return !!s && /<([a-z][a-z0-9]*)(\s[^>]*)?\/?>/i.test(s)
+}
+
+// Wandelt HTML/teils-HTML in lesbaren Plaintext: Tags raus, Entities dekodiert,
+// aber Zeilenumbrueche bleiben ERHALTEN. Frueher hat \s{2,}->' ' alle Absatz-
+// und Zeilenumbrueche zu einem Leerzeichen zusammengezogen -> "Fliesstext".
+function htmlToPlainText(text: string): string {
   if (!text) return ''
   return text
+    .replace(/<\s*br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|h[1-6]|li|tr|table)\s*>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
     .replace(/&nbsp;/gi, ' ')
     .replace(/&zwnj;/gi, '')
     .replace(/&amp;/gi, '&')
@@ -23,7 +34,9 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, "'")
     .replace(/&#\d+;/gi, '')
-    .replace(/\s{2,}/g, ' ')
+    .replace(/[ \t]{2,}/g, ' ')      // nur Spaces/Tabs zusammenfassen
+    .replace(/[ \t]*\n[ \t]*/g, '\n') // Whitespace um Umbrueche trimmen
+    .replace(/\n{3,}/g, '\n\n')       // max. eine Leerzeile
     .trim()
 }
 
@@ -96,7 +109,14 @@ function MessageContent({ msg, isAgent }: { msg: TicketMessage; isAgent: boolean
   const styles = createStyles()
   const [webViewHeight, setWebViewHeight] = useState(100)
 
-  if (msg.body_html) {
+  // HTML rendern, wenn echtes HTML vorliegt (body_html) ODER der body HTML-Tags
+  // enthaelt (z.B. System-/AB-Abgleich-Nachrichten mit <b>). Bei body-Quelle
+  // Zeilenumbrueche zu <br> machen, da HTML \n sonst zu Leerzeichen kollabiert.
+  const htmlSource = msg.body_html
+    ? msg.body_html
+    : (looksLikeHtml(msg.body) ? msg.body.replace(/\r?\n/g, '<br>') : null)
+
+  if (htmlSource) {
     const darkModeWrapper = `
       <html><head>
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=yes">
@@ -109,7 +129,7 @@ function MessageContent({ msg, isAgent }: { msg: TicketMessage; isAgent: boolean
           body > center > table, body > div > table { width: 100% !important; max-width: 100% !important; }
           td, th { color: ${colors.text} !important; }
         </style>
-      </head><body>${msg.body_html}</body></html>
+      </head><body>${htmlSource}</body></html>
     `
     return (
       <View style={{ minHeight: 60, height: webViewHeight }}>
@@ -150,7 +170,7 @@ function MessageContent({ msg, isAgent }: { msg: TicketMessage; isAgent: boolean
     )
   }
 
-  const bodyText = decodeHtmlEntities(msg.body) || '(Kein Textinhalt)'
+  const bodyText = htmlToPlainText(msg.body) || '(Kein Textinhalt)'
   return (
     <Text style={[styles.bubbleBody, isAgent ? styles.bubbleBodyAgent : styles.bubbleBodyCustomer]} selectable>
       {bodyText}
@@ -206,7 +226,7 @@ function MessageBubble({ msg, attachments }: { msg: TicketMessage; attachments: 
   const msgAttachments = attachments.filter(a => a.message_id === msg.id)
 
   if (isSystem) {
-    const bodyText = decodeHtmlEntities(msg.body) || '(Kein Textinhalt)'
+    const bodyText = htmlToPlainText(msg.body) || '(Kein Textinhalt)'
     return (
       <View style={styles.systemNote}>
         {msg.is_internal_note && (
