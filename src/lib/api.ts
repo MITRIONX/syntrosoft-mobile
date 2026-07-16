@@ -10,6 +10,8 @@ async function mobileFetch<T>(path: string, params?: Record<string, string>): Pr
     headers: {
       'Authorization': `Bearer ${conn.deviceToken}`,
       'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
     },
   })
 

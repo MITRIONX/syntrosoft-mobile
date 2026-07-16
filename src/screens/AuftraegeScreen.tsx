@@ -252,14 +252,16 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
               <Text style={styles.cardDetailText}>{item.items_count} Pos.</Text>
               <Text style={styles.cardDetailText}>{Math.round(Number((item as any).total_quantity) || 0)} Stk.</Text>
               <Text style={[styles.cardDetailText, styles.amount]}>{formatCurrency(item.total_gross)}</Text>
-              <StatusBadge status={(item as any).computed_status || item.status} />
-              {(item as any).invoice_status && (item as any).invoice_status !== 'ohne_berechnung' && (
-                <View style={[styles.badge, { backgroundColor: '#22c55e25', borderColor: '#22c55e50' }]}>
-                  <Text style={[styles.badgeText, { color: '#22c55e' }]}>
-                    {INVOICE_STATUS_CONFIG[(item as any).invoice_status]?.label || (item as any).invoice_status}
-                  </Text>
-                </View>
-              )}
+              <View style={styles.badgeGroup}>
+                <StatusBadge status={(item as any).computed_status || item.status} />
+                {(item as any).invoice_status && (item as any).invoice_status !== 'ohne_berechnung' && (
+                  <View style={[styles.badge, { backgroundColor: '#22c55e25', borderColor: '#22c55e50' }]}>
+                    <Text style={[styles.badgeText, { color: '#22c55e' }]}>
+                      {INVOICE_STATUS_CONFIG[(item as any).invoice_status]?.label || (item as any).invoice_status}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
         </View>
@@ -271,10 +273,13 @@ export function AuftraegeScreen({ onSelectAuftrag }: AuftraegeScreenProps) {
     return (
       <VersandWizard
         auftrag={wizardOrder}
-        onClose={() => setWizardOrder(null)}
+        onClose={() => {
+          setWizardOrder(null)
+          queryClient.refetchQueries({ queryKey: ['auftraege'] })
+        }}
         onComplete={() => {
           setWizardOrder(null)
-          queryClient.invalidateQueries({ queryKey: ['auftraege'] })
+          queryClient.refetchQueries({ queryKey: ['auftraege'] })
         }}
       />
     )
@@ -635,8 +640,14 @@ function createStyles() { return StyleSheet.create({
   cardRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 10,
     marginTop: 6,
+  },
+  badgeGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginLeft: 'auto',
   },
   cardDetail: {
     flexDirection: 'row',

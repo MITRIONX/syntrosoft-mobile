@@ -121,9 +121,9 @@ export function Step3Abschluss({ auftrag, items, labels, onComplete }: Props) {
         }
       }
 
-      // 4. Invalidate queries
-      queryClient.invalidateQueries({ queryKey: ['auftraege'] })
-      queryClient.invalidateQueries({ queryKey: ['shopping-list'] })
+      // 4. Invalidate queries (refetchType 'all': auch inaktive Queries sofort neu laden)
+      queryClient.invalidateQueries({ queryKey: ['auftraege'], refetchType: 'all' })
+      queryClient.invalidateQueries({ queryKey: ['shopping-list'], refetchType: 'all' })
 
       // 5. Show done screen
       setDone(true)
